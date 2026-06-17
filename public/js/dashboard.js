@@ -921,13 +921,13 @@ async function loadProfile() {
             if (c.company_logo) {
                 const img         = document.getElementById('logo-img');
                 const placeholder = document.getElementById('logo-placeholder');
-                if (img) { img.src = '/' + c.company_logo; img.style.display = 'block'; }
+                if (img) { img.src = c.company_logo; img.style.display = 'block'; }
                 if (placeholder) placeholder.style.display = 'none';
 
                 // Update avatar topbar juga
                 const topbarAvatar = document.getElementById('topbarAvatar');
                 if (topbarAvatar) {
-                    topbarAvatar.style.backgroundImage = `url('/${c.company_logo}')`;
+                    topbarAvatar.style.backgroundImage = `url('${c.company_logo}')`;
                     topbarAvatar.style.backgroundSize  = 'cover';
                     topbarAvatar.style.color           = 'transparent';
                 }

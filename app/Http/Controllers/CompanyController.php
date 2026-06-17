@@ -6,9 +6,17 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Carbon\Carbon;
+use App\Services\SupabaseStorageService;
 
 class CompanyController extends Controller
 {
+    private SupabaseStorageService $storage;
+
+    public function __construct(SupabaseStorageService $storage)
+    {
+        $this->storage = $storage;
+    }
+
     private function logActivity(string $action)
     {
         $companyId = session('type_id');
@@ -41,6 +49,11 @@ class CompanyController extends Controller
 
         if (!$company) {
             return response()->json(['success' => false, 'message' => 'Perusahaan tidak ditemukan'], 404);
+        }
+
+        // Convert path logo (tersimpan di DB) jadi public URL Supabase
+        if (!empty($company->company_logo)) {
+            $company->company_logo = $this->storage->publicUrl('logo-comp', $company->company_logo);
         }
 
         return response()->json(['success' => true, 'data' => $company]);
@@ -80,23 +93,28 @@ class CompanyController extends Controller
             return response()->json(['success' => false, 'message' => 'File logo tidak ditemukan'], 400);
         }
 
-        $file    = $request->file('logo');
-        $allowed = ['jpg', 'jpeg', 'png', 'webp'];
-        $ext     = strtolower($file->getClientOriginalExtension());
+        $file = $request->file('logo');
 
-        if (!in_array($ext, $allowed)) {
-            return response()->json(['success' => false, 'message' => 'Format harus JPG, PNG, atau WebP'], 400);
+        $error = $this->storage->validateFile($file, ['jpg', 'jpeg', 'png', 'webp'], 2 * 1024 * 1024);
+        if ($error) {
+            return response()->json(['success' => false, 'message' => $error], 400);
         }
 
-        if ($file->getSize() > 2 * 1024 * 1024) {
-            return response()->json(['success' => false, 'message' => 'Ukuran maksimal 2MB'], 400);
+        // Upload ke bucket Supabase 'logo-comp', dikelompokkan per id_company
+        $result = $this->storage->upload($file, 'logo-comp', $companyId);
+
+        if (!$result['success']) {
+            return response()->json(['success' => false, 'message' => 'Gagal upload logo: ' . $result['error']], 500);
         }
 
-        $filename = 'logo_' . $companyId . '_' . time() . '.' . $ext;
-        $file->move(public_path('uploads/logos'), $filename);
+        // Hapus logo lama dari Supabase kalau ada, supaya storage tidak menumpuk
+        $old = DB::table('companies')->where('id_company', $companyId)->first();
+        if (!empty($old?->company_logo)) {
+            $this->storage->delete('logo-comp', $old->company_logo);
+        }
 
         DB::table('companies')->where('id_company', $companyId)->update([
-            'company_logo' => 'uploads/logos/' . $filename,
+            'company_logo' => $result['path'],
         ]);
 
         $this->logActivity('Ganti logo perusahaan');
@@ -104,7 +122,7 @@ class CompanyController extends Controller
         return response()->json([
             'success'  => true,
             'message'  => 'Logo berhasil diupload!',
-            'logo_url' => asset('uploads/logos/' . $filename)
+            'logo_url' => $result['public_url'],
         ]);
     }
 

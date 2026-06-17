@@ -125,8 +125,11 @@
                         @if (count($daftarLowongan) > 0)
                             @foreach ($daftarLowongan as $row)
                                 @php 
-                                    $fileName = $row->supporting_document ? $row->supporting_document : 'MOU_Mitra_Undef.pdf';
-                                    $fileLink = asset('uploads/' . $fileName);
+                                    $hasDocument = !empty($row->supporting_document);
+                                    $fileName    = $hasDocument ? basename($row->supporting_document) : 'Belum ada dokumen';
+                                    $fileLink    = $hasDocument 
+                                        ? config('services.supabase.url') . '/storage/v1/object/public/dokumen-pendukung/' . $row->supporting_document
+                                        : '#';
                                 @endphp
                                 <tr class="border-bottom">
                                     <td class="py-3">
@@ -145,9 +148,13 @@
                                         <small class="text-muted d-block"><i class="bi bi-geo-alt"></i> {{ $row->location }}</small>
                                     </td>
                                     <td>
-                                        <a href="{{ $fileLink }}" download class="text-decoration-none text-primary fw-semibold" title="Klik untuk mengunduh dokumen">
-                                            <i class="bi bi-download me-1"></i> {{ $fileName }}
-                                        </a>
+                                        @if($hasDocument)
+                                            <a href="{{ $fileLink }}" download target="_blank" class="text-decoration-none text-primary fw-semibold" title="Klik untuk mengunduh dokumen">
+                                                <i class="bi bi-download me-1"></i> {{ $fileName }}
+                                            </a>
+                                        @else
+                                            <span class="text-muted small">{{ $fileName }}</span>
+                                        @endif
                                     </td>
                                     <td>
                                         {{ \Carbon\Carbon::parse($row->deadline)->locale('id')->isoFormat('D MMMM YYYY') }}

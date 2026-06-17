@@ -23,10 +23,9 @@ return [
         ],
     ],
 
-    // ← tambahkan di sini
     'supabase' => [
-        'url'    => env('https://qdcjgonjjrxhghlbdarz.supabase.co'),
-        'key'    => env('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFkY2pnb25qanJ4aGdobGJkYXJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNTkzMDMsImV4cCI6MjA5NjgzNTMwM30.PbvvDNzw2X0evntV2Ksw_tbypR2DjE8R4r7nUW7DHeM'),
-        'bucket' => env('SUPABASE_BUCKET', 'logo-comp'),
+        'url' => env('SUPABASE_URL'),
+        'key' => env('SUPABASE_KEY'),
     ],
+
 ];

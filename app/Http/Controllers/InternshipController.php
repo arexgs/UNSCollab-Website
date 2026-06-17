@@ -4,9 +4,17 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Services\SupabaseStorageService;
 
 class InternshipController extends Controller
 {
+    private SupabaseStorageService $storage;
+
+    public function __construct(SupabaseStorageService $storage)
+    {
+        $this->storage = $storage;
+    }
+
     public function store(Request $request)
     {
         $companyId = session('type_id');
@@ -32,25 +40,25 @@ class InternshipController extends Controller
 
         $imagePath = null;
         if ($request->hasFile('image')) {
-            $file    = $request->file('image');
-            $allowed = ['jpg', 'jpeg', 'png', 'webp'];
-            $ext     = strtolower($file->getClientOriginalExtension());
-            if (in_array($ext, $allowed) && $file->getSize() <= 2 * 1024 * 1024) {
-                $filename  = 'internship_img_' . time() . '_' . uniqid() . '.' . $ext;
-                $file->move(public_path('uploads/internships'), $filename);
-                $imagePath = 'uploads/internships/' . $filename;
+            $file  = $request->file('image');
+            $error = $this->storage->validateFile($file, ['jpg', 'jpeg', 'png', 'webp'], 2 * 1024 * 1024);
+            if (!$error) {
+                $result = $this->storage->upload($file, 'banner', $companyId);
+                if ($result['success']) {
+                    $imagePath = $result['path'];
+                }
             }
         }
 
         $docPath = null;
         if ($request->hasFile('supporting_document')) {
-            $file    = $request->file('supporting_document');
-            $allowed = ['pdf', 'doc', 'docx'];
-            $ext     = strtolower($file->getClientOriginalExtension());
-            if (in_array($ext, $allowed) && $file->getSize() <= 10 * 1024 * 1024) {
-                $filename = 'internship_doc_' . time() . '_' . uniqid() . '.' . $ext;
-                $file->move(public_path('uploads/internships'), $filename);
-                $docPath  = 'uploads/internships/' . $filename;
+            $file  = $request->file('supporting_document');
+            $error = $this->storage->validateFile($file, ['pdf', 'doc', 'docx'], 10 * 1024 * 1024);
+            if (!$error) {
+                $result = $this->storage->upload($file, 'dokumen-pendukung', $companyId);
+                if ($result['success']) {
+                    $docPath = $result['path'];
+                }
             }
         }
 
@@ -130,22 +138,30 @@ class InternshipController extends Controller
         ];
 
         if ($request->hasFile('image')) {
-            $file = $request->file('image');
-            $ext  = strtolower($file->getClientOriginalExtension());
-            if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp']) && $file->getSize() <= 2 * 1024 * 1024) {
-                $filename             = 'internship_img_' . time() . '_' . uniqid() . '.' . $ext;
-                $file->move(public_path('uploads/internships'), $filename);
-                $updateData['image']  = 'uploads/internships/' . $filename;
+            $file  = $request->file('image');
+            $error = $this->storage->validateFile($file, ['jpg', 'jpeg', 'png', 'webp'], 2 * 1024 * 1024);
+            if (!$error) {
+                $result = $this->storage->upload($file, 'banner', $companyId);
+                if ($result['success']) {
+                    if (!empty($internship->image)) {
+                        $this->storage->delete('banner', $internship->image);
+                    }
+                    $updateData['image'] = $result['path'];
+                }
             }
         }
 
         if ($request->hasFile('supporting_document')) {
-            $file = $request->file('supporting_document');
-            $ext  = strtolower($file->getClientOriginalExtension());
-            if (in_array($ext, ['pdf', 'doc', 'docx']) && $file->getSize() <= 10 * 1024 * 1024) {
-                $filename                          = 'internship_doc_' . time() . '_' . uniqid() . '.' . $ext;
-                $file->move(public_path('uploads/internships'), $filename);
-                $updateData['supporting_document'] = 'uploads/internships/' . $filename;
+            $file  = $request->file('supporting_document');
+            $error = $this->storage->validateFile($file, ['pdf', 'doc', 'docx'], 10 * 1024 * 1024);
+            if (!$error) {
+                $result = $this->storage->upload($file, 'dokumen-pendukung', $companyId);
+                if ($result['success']) {
+                    if (!empty($internship->supporting_document)) {
+                        $this->storage->delete('dokumen-pendukung', $internship->supporting_document);
+                    }
+                    $updateData['supporting_document'] = $result['path'];
+                }
             }
         }
 
@@ -181,6 +197,14 @@ class InternshipController extends Controller
 
         if ($internship->approval_status !== 'pending') {
             return response()->json(['success' => false, 'message' => 'Lowongan hanya bisa dihapus selama masih pending'], 403);
+        }
+
+        // Hapus file terkait dari Supabase Storage sebelum hapus record DB
+        if (!empty($internship->image)) {
+            $this->storage->delete('banner', $internship->image);
+        }
+        if (!empty($internship->supporting_document)) {
+            $this->storage->delete('dokumen-pendukung', $internship->supporting_document);
         }
 
         DB::table('internships')->where('id_internship', $idInternship)->delete();

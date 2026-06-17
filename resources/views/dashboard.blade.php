@@ -1035,6 +1035,7 @@
                           <i class="bi bi-upload"></i> Pilih Logo
                       </button>
                   </div>
+              </div>
                   <!-- Crop area -->
 <div id="crop-container" style="display:none;margin-top:16px">
     <p style="font-size:12px;color:var(--muted);margin-bottom:8px">
@@ -1069,6 +1070,8 @@
         <i class="bi bi-check-lg"></i> Terapkan & Upload
     </button>
 </div>
+</div>
+</div>
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label">Nama Perusahaan <span style="color:#DC2626">*</span></label>
@@ -1089,12 +1092,11 @@
           </div>
         </div>
       </div>
-
       <div class="d-flex justify-content-end gap-2 mt-3">
         <button class="btn-brand" onclick="handleSaveProfile()"><i class="bi bi-check-lg"></i> Simpan Profil</button>
       </div>
     </div>
-
+    
           <!-- ═══════════════ PENGATURAN ═══════════════ -->
     <div class="page" id="page-pengaturan" style="display:none">
       <div class="pg-header">
