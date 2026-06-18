@@ -5,15 +5,16 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class LoginController extends Controller
 {
     public function store(Request $request)
     {
         // 1. Ambil data input dari form login
-        $email = trim($request->input('email'));
+        $email    = trim($request->input('email'));
         $password = $request->input('password');
-        $mode = $request->input('mode'); // Pastikan front-end mengirimkan mode ('admin' / 'company')
+        $mode     = $request->input('mode'); // 'admin' / 'company'
 
         // 2. Tentukan role berdasarkan mode pilihan login
         $role = ($mode === 'admin') ? 'admin' : 'company';
@@ -24,7 +25,6 @@ class LoginController extends Controller
             ->where('role', $role)
             ->first();
 
-        // Jika user tidak ditemukan
         if (!$user) {
             return response()->json([
                 'success' => false,
@@ -32,19 +32,10 @@ class LoginController extends Controller
             ], 401);
         }
 
-        // 4. Proses pengecekan password menggunakan Hash::check (Bcrypt)
-        $passwordMatches = false;
+        // 4. Cek password
+        $passwordMatches = Hash::check($password, $user->password)
+                        || $password === $user->password; // fallback plain text data lama
 
-        // Cek pakai Bcrypt bawaan Laravel
-        if (Hash::check($password, $user->password)) {
-            $passwordMatches = true;
-        } 
-        // Cadangan: Cek kecocokan teks murni (plain text) jika ada data lama
-        else if ($password === $user->password) {
-            $passwordMatches = true;
-        }
-
-        // Jika password salah / tidak cocok
         if (!$passwordMatches) {
             return response()->json([
                 'success' => false,
@@ -52,20 +43,52 @@ class LoginController extends Controller
             ], 401);
         }
 
-        // 5. Jika lolos semua, buat Session login
+        // 5. Ambil type_id dan user_name sesuai role
+        $typeId   = null;
+        $userName = $user->email; // fallback
+
+        if ($user->role === 'admin') {
+            // Ambil id_admin + nama dari tabel admins
+            $admin = DB::table('admins')->where('id_user', $user->id_user)->first();
+            if ($admin) {
+                $typeId   = (string) $admin->id_admin;
+                $userName = $admin->full_name ?? $user->email;
+            }
+
+            // Catat log login admin
+            if ($typeId) {
+                DB::table('admin_logs')->insert([
+                    'id_admin_log' => (string) Str::uuid(),
+                    'id_admin'     => $typeId,
+                    'action'       => 'Admin Login',
+                    'created_at'   => now(),
+                ]);
+            }
+
+        } else {
+            // Ambil id_company + nama perusahaan dari tabel companies
+            $company = DB::table('companies')->where('id_user', $user->id_user)->first();
+            if ($company) {
+                $typeId   = (string) $company->id_company;
+                $userName = $company->company_name ?? $user->email;
+            }
+        }
+
+        // 6. Set session lengkap
         session([
-            'user_id'    => $user->id_user, // sesuaikan dengan nama primary key di tabelmu
+            'user_id'    => $user->id_user,
             'user_email' => $user->email,
             'user_type'  => $user->role,
-            'user_name'  => $user->username ?? 'Admin'
+            'user_name'  => $userName,
+            'type_id'    => $typeId,
         ]);
 
-        // 6. Kembalikan response sukses beserta rute dashboard-nya
+        // 7. Redirect sesuai role
         $redirectUrl = ($user->role === 'admin') ? url('/admin-dashboard') : url('/dashboard');
 
         return response()->json([
-            'success' => true,
-            'message' => 'Login Berhasil!',
+            'success'  => true,
+            'message'  => 'Login Berhasil!',
             'redirect' => $redirectUrl
         ]);
     }

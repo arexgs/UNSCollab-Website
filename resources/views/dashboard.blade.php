@@ -800,9 +800,8 @@
             <div style="font-size:13px;opacity:.8;margin-top:3px">Melamar: <span id="det-posisi">-</span> &nbsp;·&nbsp; <span id="det-date">-</span></div>
             <div style="margin-top:10px" id="det-status-wrap"></div>
           </div>
-          <div class="d-flex gap-2 flex-wrap">
-            <button class="btn-success-soft" onclick="updatePelamarStatus('accepted')"><i class="bi bi-check-lg"></i> Terima</button>
-            <button class="btn-danger-soft" onclick="updatePelamarStatus('rejected')"><i class="bi bi-x-lg"></i> Tolak</button>
+          <div class="d-flex gap-2 flex-wrap" id="det-aksi-wrap">
+            {{-- diisi dinamis oleh showDetailPelamar() berdasarkan status --}}
           </div>
         </div>
       </div>
@@ -826,7 +825,6 @@
               <div class="col-6"><div class="info-box"><div class="info-key">Jurusan</div><div class="info-val" id="det-jurusan">-</div></div></div>
               <div class="col-6"><div class="info-box"><div class="info-key">Angkatan</div><div class="info-val" id="det-angkatan">-</div></div></div>
               <div class="col-6"><div class="info-box"><div class="info-key">Email</div><div class="info-val" style="font-size:12px;word-break:break-all" id="det-email">-</div></div></div>
-              <div class="col-6"><div class="info-box"><div class="info-key">No. HP</div><div class="info-val" id="det-phone">-</div></div></div>
             </div>
           </div>
         </div>
@@ -1374,7 +1372,7 @@
     window._userData = window.userData;
 
     // ── showPage: handle navigasi sidebar ──
-    function showPage(page, el) {
+    window.showPage = function(page, el) {
         document.querySelectorAll('.page').forEach(section => {
             section.style.display = 'none';
             section.classList.remove('active');
@@ -1389,16 +1387,19 @@
         });
         if (el) el.classList.add('active');
 
-        // ← PASTIKAN INI ADA
-        if (page === 'profil') loadProfile();
-        if (page === 'pengaturan') { loadSettings(); loadActivities(); }
+        if (page === 'profil')      loadProfile();
+        if (page === 'pengaturan')  { loadSettings(); loadActivities(); }
     }
 
+    // alias lokal tetap jalan untuk onclick di blade
+    function showPage(page, el) { window.showPage(page, el); }
+
     // ── toggleNotif: buka/tutup dropdown notifikasi ──
-    function toggleNotif() {
+    window.toggleNotif = function() {
         const notifDd = document.getElementById('notif-dd');
         if (notifDd) notifDd.classList.toggle('open');
     }
+    function toggleNotif() { window.toggleNotif(); }
 
     // Tutup notif kalau klik di luar
     document.addEventListener('click', function(e) {

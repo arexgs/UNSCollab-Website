@@ -12,14 +12,13 @@ function checkSession() {
         return;
     }
 
-    const greetName   = document.getElementById('greetName');
+    const greetName    = document.getElementById('greetName');
     const topbarAvatar = document.getElementById('topbarAvatar');
-    const setEmail    = document.getElementById('set-email');
+    const setEmail     = document.getElementById('set-email');
 
     if (greetName) greetName.textContent = window.userData.name;
     if (setEmail)  setEmail.value        = window.userData.email;
 
-    // Isi avatar topbar dengan inisial nama perusahaan
     if (topbarAvatar) {
         const initials = (window.userData.name || '--').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
         topbarAvatar.textContent = initials;
@@ -38,44 +37,38 @@ async function initializeDashboard() {
 
         if (!data.success) return;
 
-        // Hitung lowongan aktif (approved) dan pending dari data lowongan
         const today = new Date();
         const lowonganAktif = (data.lowongan || []).filter(l =>
             l.approval_status === 'approved' &&
             (!l.deadline || new Date(l.deadline) >= today)
         ).length;
 
-        // Stats cards
         setEl('sv1', lowonganAktif);
         setEl('sv2', data.stats.total_pelamar);
         setEl('sv3', data.stats.pending_lowongan);
         setEl('sv4', data.stats.diterima);
 
-        // Sidebar badges
         setEl('lowonganBadge', data.lowongan?.length || 0);
         setEl('pelamarBadge',  data.stats.total_pelamar);
 
-        // Render
         renderLowongan(data.lowongan);
         renderPelamar(data.pelamar);
         renderBarChart(data.pelamar);
         renderProgressStatus(data.pelamar);
         loadActivitiesTimeline();
         loadNotifDropdown(data.pelamar, data.lowongan);
-        loadProfile(); // update avatar topbar jika logo sudah ada
+        loadProfile();
 
     } catch (error) {
         console.error('Error fetch dashboard:', error);
     }
 }
 
-// Helper set element text
 function setEl(id, val) {
     const el = document.getElementById(id);
     if (el) el.textContent = val ?? '0';
 }
 
-// Render bar chart pelamar per posisi ke #bar-chart
 function renderBarChart(pelamar) {
     const container = document.getElementById('bar-chart');
     if (!container) return;
@@ -105,7 +98,6 @@ function renderBarChart(pelamar) {
     }).join('');
 }
 
-// Render progress status pelamar ke #progress-container
 function renderProgressStatus(pelamar) {
     const container = document.getElementById('progress-container');
     if (!container) return;
@@ -116,7 +108,6 @@ function renderProgressStatus(pelamar) {
         return;
     }
 
-    // Enum DB: pending, reviewed, accepted, rejected
     const counts = { pending: 0, reviewed: 0, accepted: 0, rejected: 0 };
     pelamar.forEach(p => { if (counts[p.application_status] !== undefined) counts[p.application_status]++; });
 
@@ -144,7 +135,6 @@ function renderProgressStatus(pelamar) {
 
 // Upload logo dilakukan via applyCrop() menggunakan crop system
 
-// Render aktivitas terbaru dari activity_logs ke #activity-timeline
 async function loadActivitiesTimeline() {
     const container = document.getElementById('activity-timeline');
     if (!container) return;
@@ -178,10 +168,8 @@ async function loadActivitiesTimeline() {
     }
 }
 
-// Simpan semua lowongan untuk keperluan filter
 let _allLowongan = [];
 
-// Render Lowongan
 function renderLowongan(lowongan) {
     _allLowongan = lowongan || [];
     _renderLowonganGrid(_allLowongan);
@@ -201,20 +189,18 @@ function _updateLowonganCounts(lowongan) {
         } else if (l.approval_status === 'rejected') counts.closed++;
     });
 
-    setEl('count-all',    counts.all);
-    setEl('count-aktif',  counts.active);
-    setEl('count-pending',counts.pending);
-    setEl('count-ditutup',counts.closed);
+    setEl('count-all',     counts.all);
+    setEl('count-aktif',   counts.active);
+    setEl('count-pending', counts.pending);
+    setEl('count-ditutup', counts.closed);
 
-    // Pending banner di halaman kelola lowongan
-    const banner      = document.getElementById('pending-banner');
+    const banner       = document.getElementById('pending-banner');
     const pendingCount = document.getElementById('pending-count');
-    if (banner) banner.style.display = counts.pending > 0 ? 'flex' : 'none';
-    if (pendingCount) pendingCount.textContent = counts.pending;
+    if (banner)       banner.style.display      = counts.pending > 0 ? 'flex' : 'none';
+    if (pendingCount) pendingCount.textContent   = counts.pending;
 }
 
 function filterLw(filter, el) {
-    // Update active tab
     document.querySelectorAll('.nav-pill-tab').forEach(t => t.classList.remove('active'));
     if (el) el.classList.add('active');
 
@@ -258,7 +244,6 @@ function _renderLowonganGrid(lowongan) {
 
     const today = new Date();
     grid.innerHTML = lowongan.map(l => {
-        // Pakai approval_status sesuai DB
         const isPending  = l.approval_status === 'pending';
         const isApproved = l.approval_status === 'approved';
         const isRejected = l.approval_status === 'rejected';
@@ -271,7 +256,6 @@ function _renderLowonganGrid(lowongan) {
         else if (isClosed)   { statusColor = 'pill-red';    statusLabel = 'Ditutup'; }
         else                 { statusColor = 'pill-green';  statusLabel = 'Aktif'; }
 
-        // Klik card yang approved → filter pelamar berdasarkan lowongan ini
         const clickHandler = isApproved && !isClosed
             ? `showPelamarByLowongan('${l.id_internship}', '${l.title.replace(/'/g, "\\'")}')`
             : '';
@@ -312,16 +296,12 @@ function _renderLowonganGrid(lowongan) {
     }).join('');
 }
 
-// Klik card lowongan → buka halaman pelamar dan filter berdasarkan lowongan itu
 function showPelamarByLowongan(idInternship, title) {
-    // Update subtitle
     const subtitle = document.getElementById('pelamar-subtitle');
     if (subtitle) subtitle.innerHTML = `Lowongan: <strong>${title}</strong>`;
 
-    // Filter dropdown posisi
     const filterPosisi = document.getElementById('filter-posisi');
     if (filterPosisi) {
-        // Cari option yang cocok dan select
         Array.from(filterPosisi.options).forEach(opt => {
             if (opt.value === idInternship) opt.selected = true;
         });
@@ -331,14 +311,11 @@ function showPelamarByLowongan(idInternship, title) {
     filterPelamar();
 }
 
-// Simpan semua pelamar untuk keperluan filter
 let _allPelamar = [];
 
-// Render Pelamar
 function renderPelamar(pelamar) {
     _allPelamar = pelamar || [];
 
-    // Isi dropdown filter posisi dari data lowongan yang unik
     const filterPosisi = document.getElementById('filter-posisi');
     if (filterPosisi) {
         const posisiSet = [...new Set(_allPelamar.map(p => JSON.stringify({ id: p.id_internship, title: p.posisi })))];
@@ -347,8 +324,6 @@ function renderPelamar(pelamar) {
                 const obj = JSON.parse(s);
                 return `<option value="${obj.id}">${obj.title}</option>`;
             }).join('');
-
-        // Event listener filter
         filterPosisi.onchange = filterPelamar;
     }
 
@@ -358,9 +333,7 @@ function renderPelamar(pelamar) {
     const searchInput = document.getElementById('search-pelamar');
     if (searchInput) searchInput.oninput = filterPelamar;
 
-    // Update total
     setEl('total-pelamar', _allPelamar.length);
-
     _renderPelamarTable(_allPelamar);
 }
 
@@ -376,7 +349,6 @@ function filterPelamar() {
         return matchPosisi && matchStatus && matchSearch;
     });
 
-    // Update total sesuai filter
     setEl('total-pelamar', filtered.length);
     _renderPelamarTable(filtered);
 }
@@ -400,8 +372,9 @@ function _renderPelamarTable(pelamar) {
     tbody.innerHTML = pelamar.map(p => {
         const statusColor = { pending:'pill-yellow', reviewed:'pill-purple', accepted:'pill-green', rejected:'pill-red' }[p.application_status] || 'pill-blue';
         const statusLabel = { pending:'Menunggu', reviewed:'Direview', accepted:'Diterima', rejected:'Ditolak' }[p.application_status] || p.application_status;
-        const initials = (p.full_name || '--').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-        const date = p.apply_date ? new Date(p.apply_date).toLocaleDateString('id-ID') : '-';
+        const initials    = (p.full_name || '--').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        // FIX: format tanggal — handle null dan timezone dengan benar
+        const date        = p.apply_date ? new Date(p.apply_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'numeric', year: 'numeric' }) : '-';
 
         return `
         <tr onclick="showDetailPelamar(${JSON.stringify(p).replace(/"/g, '&quot;')})">
@@ -416,7 +389,6 @@ function _renderPelamarTable(pelamar) {
           </td>
           <td>${p.posisi || '-'}</td>
           <td>${p.major || '-'}</td>
-          <td>N/A</td>
           <td>${date}</td>
           <td><span class="pill ${statusColor}">${statusLabel}</span></td>
           <td>
@@ -428,32 +400,42 @@ function _renderPelamarTable(pelamar) {
     }).join('');
 }
 
-// Tampilkan Detail Pelamar
 function showDetailPelamar(p) {
     const initials = (p.full_name || '--').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 
-    document.getElementById('det-avatar').textContent   = initials;
-    document.getElementById('det-name').textContent     = p.full_name || '-';
-    document.getElementById('det-posisi').textContent   = p.posisi || '-';
-    document.getElementById('det-date').textContent     = p.apply_date ? new Date(p.apply_date).toLocaleDateString('id-ID') : '-';
-    document.getElementById('det-jurusan').textContent  = p.major || '-';
-    document.getElementById('det-email').textContent    = p.email || '-';
+    const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    const setHtml = (id, val) => { const el = document.getElementById(id); if (el) el.innerHTML = val; };
 
-    // Tidak ada di DB — tampilkan N/A
-    document.getElementById('det-ipk').textContent      = 'N/A';
-    document.getElementById('det-angkatan').textContent = 'N/A';
-    document.getElementById('det-phone').textContent    = 'N/A';
+    setTxt('det-avatar',  initials);
+    setTxt('det-name',    p.full_name || '-');
+    setTxt('det-posisi',  p.posisi    || '-');
+    setTxt('det-jurusan', p.major     || '-');
+    setTxt('det-email',   p.email     || '-');
 
-    // Data dari tabel students
-    document.getElementById('det-bio').textContent        = p.bio        || 'Belum ada bio.';
-    document.getElementById('det-experience').textContent = p.experience || 'Belum ada pengalaman.';
-    document.getElementById('det-surat').textContent      = p.cover_letter || 'Tidak ada surat lamaran.';
+    // Format tanggal
+    setTxt('det-date', p.apply_date
+        ? new Date(p.apply_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+        : '-');
+
+    // Angkatan dari NIM (digit 3-4 = tahun masuk, contoh M0521001 → 2021)
+    const angkatan = p.nim ? '20' + p.nim.replace(/[^0-9]/g, '').substring(2, 4) : 'N/A';
+    setTxt('det-angkatan', angkatan);
+    setTxt('det-phone',    p.contact || p.phone || 'N/A');
+
+    // Data students
+    setTxt('det-bio',        p.bio          || 'Belum ada bio.');
+    setTxt('det-experience', p.experience   || 'Belum ada pengalaman.');
+    setTxt('det-surat',      p.cover_letter || 'Tidak ada surat lamaran.');
 
     // Portofolio
     const portoEl = document.getElementById('det-portofolio');
-    if (portoEl) portoEl.textContent = p.portofolio || 'Belum ada portofolio.';
+    if (portoEl) {
+        portoEl.innerHTML = p.portofolio
+            ? `<a href="${p.portofolio}" target="_blank" rel="noopener" style="color:var(--brand)">${p.portofolio}</a>`
+            : 'Belum ada portofolio.';
+    }
 
-    // Skill — tampilkan sebagai tag
+    // Skill tags
     const skillEl = document.getElementById('det-skills');
     if (skillEl) {
         skillEl.innerHTML = p.skill
@@ -461,43 +443,73 @@ function showDetailPelamar(p) {
             : 'Belum ada keahlian.';
     }
 
-    // Dokumen — CV (path sudah dari root public)
-    document.getElementById('det-documents').innerHTML = p.cv
+    // Dokumen CV
+    setHtml('det-documents', p.cv
         ? `<a href="/${p.cv}" target="_blank" class="btn-outline btn-sm"><i class="bi bi-file-earmark-pdf"></i> Lihat CV</a>`
-        : '<span style="color:var(--muted);font-size:13px">Tidak ada dokumen.</span>';
+        : '<span style="color:var(--muted);font-size:13px">Tidak ada dokumen.</span>');
 
-    document.getElementById('det-id-student').value    = p.id_student;
-    document.getElementById('det-id-internship').value = p.id_internship;
+    // Hidden inputs untuk update status
+    const elStudent    = document.getElementById('det-id-student');
+    const elInternship = document.getElementById('det-id-internship');
+    if (elStudent)    elStudent.value    = p.id_student;
+    if (elInternship) elInternship.value = p.id_internship;
 
+    // Status badge
     const statusColor = { pending:'pill-yellow', reviewed:'pill-purple', accepted:'pill-green', rejected:'pill-red' }[p.application_status] || 'pill-blue';
     const statusLabel = { pending:'Menunggu', reviewed:'Direview', accepted:'Diterima', rejected:'Ditolak' }[p.application_status] || p.application_status;
-    document.getElementById('det-status-wrap').innerHTML = `<span class="pill ${statusColor}">${statusLabel}</span>`;
+    setHtml('det-status-wrap', `<span class="pill ${statusColor}">${statusLabel}</span>`);
+
+    // Tombol aksi dinamis
+    const aksiWrap = document.getElementById('det-aksi-wrap');
+    if (aksiWrap) {
+        if (p.application_status === 'accepted') {
+            aksiWrap.innerHTML = `
+                <button class="btn-danger-soft" onclick="updatePelamarStatus('rejected')"><i class="bi bi-x-lg"></i> Tolak</button>
+                <button class="btn-outline btn-sm" onclick="updatePelamarStatus('pending')" style="opacity:.7"><i class="bi bi-arrow-counterclockwise"></i> Reset</button>`;
+        } else if (p.application_status === 'rejected') {
+            aksiWrap.innerHTML = `
+                <button class="btn-success-soft" onclick="updatePelamarStatus('accepted')"><i class="bi bi-check-lg"></i> Terima</button>
+                <button class="btn-outline btn-sm" onclick="updatePelamarStatus('pending')" style="opacity:.7"><i class="bi bi-arrow-counterclockwise"></i> Reset</button>`;
+        } else if (p.application_status === 'reviewed') {
+            aksiWrap.innerHTML = `
+                <button class="btn-success-soft" onclick="updatePelamarStatus('accepted')"><i class="bi bi-check-lg"></i> Terima</button>
+                <button class="btn-danger-soft" onclick="updatePelamarStatus('rejected')"><i class="bi bi-x-lg"></i> Tolak</button>`;
+        } else {
+            aksiWrap.innerHTML = `
+                <button class="btn-outline btn-sm" onclick="updatePelamarStatus('reviewed')"><i class="bi bi-eye"></i> Tandai Direview</button>
+                <button class="btn-success-soft" onclick="updatePelamarStatus('accepted')"><i class="bi bi-check-lg"></i> Terima</button>
+                <button class="btn-danger-soft" onclick="updatePelamarStatus('rejected')"><i class="bi bi-x-lg"></i> Tolak</button>`;
+        }
+    }
 
     showPage('detail', null);
 }
 
 // ── CROP SYSTEM ────────────────────────────────────────
-// cropState menyimpan posisi (ox, oy) relatif terhadap center canvas
-// dan scale. ox/oy dalam koordinat gambar asli.
-let cropState = {
-    scale: 1,
-    ox: 0, oy: 0,           // offset center gambar dari center canvas (pixel gambar asli)
-    isDragging: false,
-    lastX: 0, lastY: 0,     // posisi mouse/touch terakhir saat drag
-};
+let cropState = { scale: 1, ox: 0, oy: 0, isDragging: false, lastX: 0, lastY: 0 };
+const CROP_SIZE = 360;
 
-const CROP_SIZE = 360;      // ukuran canvas crop (px) — harus sama dengan blade
+function openCropModal(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+        showToast('✗ Ukuran file maksimal 2MB');
+        event.target.value = '';
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = e => initCrop(e.target.result);
+    reader.readAsDataURL(file);
+}
 
 function initCrop(imageSrc) {
     const container = document.getElementById('crop-container');
     const img       = document.getElementById('crop-img');
     if (!container || !img) return;
 
-    // Reset state
     cropState = { scale: 1, ox: 0, oy: 0, isDragging: false, lastX: 0, lastY: 0 };
 
     img.onload = () => {
-        // Skala awal: fit gambar ke CROP_SIZE
         const fitScale = Math.max(CROP_SIZE / img.naturalWidth, CROP_SIZE / img.naturalHeight);
         cropState.scale = fitScale;
         document.getElementById('crop-zoom').min   = Math.round(fitScale * 100);
@@ -506,10 +518,8 @@ function initCrop(imageSrc) {
         _applyCropTransform();
     };
     img.src = imageSrc;
-
     container.style.display = 'block';
 
-    // ── Mouse events ──
     const viewport = container.querySelector('.crop-viewport');
 
     viewport.onmousedown = (e) => {
@@ -534,7 +544,6 @@ function initCrop(imageSrc) {
         viewport.style.cursor = 'grab';
     };
 
-    // ── Touch events (mobile) ──
     let lastTouchDist = null;
     viewport.ontouchstart = (e) => {
         if (e.touches.length === 1) {
@@ -565,15 +574,15 @@ function initCrop(imageSrc) {
                 e.touches[0].clientX - e.touches[1].clientX,
                 e.touches[0].clientY - e.touches[1].clientY
             );
-            const ratio = dist / lastTouchDist;
+            const ratio  = dist / lastTouchDist;
             const zoomEl = document.getElementById('crop-zoom');
             const newScale = Math.min(
                 Math.max(cropState.scale * ratio, Number(zoomEl.min) / 100),
                 Number(zoomEl.max) / 100
             );
             cropState.scale = newScale;
-            zoomEl.value = Math.round(newScale * 100);
-            lastTouchDist = dist;
+            zoomEl.value    = Math.round(newScale * 100);
+            lastTouchDist   = dist;
             _applyCropTransform();
         }
         e.preventDefault();
@@ -583,13 +592,12 @@ function initCrop(imageSrc) {
         lastTouchDist = null;
     };
 
-    // ── Scroll to zoom di desktop ──
     viewport.onwheel = (e) => {
         e.preventDefault();
-        const zoomEl  = document.getElementById('crop-zoom');
-        const delta   = e.deltaY < 0 ? 5 : -5;
-        const newVal  = Math.min(Math.max(Number(zoomEl.value) + delta, Number(zoomEl.min)), Number(zoomEl.max));
-        zoomEl.value  = newVal;
+        const zoomEl = document.getElementById('crop-zoom');
+        const delta  = e.deltaY < 0 ? 5 : -5;
+        const newVal = Math.min(Math.max(Number(zoomEl.value) + delta, Number(zoomEl.min)), Number(zoomEl.max));
+        zoomEl.value = newVal;
         handleCropZoom(newVal);
     };
 }
@@ -602,19 +610,17 @@ function handleCropZoom(value) {
 function _applyCropTransform() {
     const img = document.getElementById('crop-img');
     if (!img) return;
-    // Posisi gambar: pusatkan gambar lalu geser sesuai offset
     const cx = CROP_SIZE / 2 - cropState.ox * cropState.scale;
     const cy = CROP_SIZE / 2 - cropState.oy * cropState.scale;
-    img.style.transform        = `none`;
-    img.style.position         = 'absolute';
-    img.style.transformOrigin  = '0 0';
-    img.style.width            = img.naturalWidth * cropState.scale + 'px';
-    img.style.height           = img.naturalHeight * cropState.scale + 'px';
-    img.style.left             = (cx - img.naturalWidth  * cropState.scale / 2) + 'px';
-    img.style.top              = (cy - img.naturalHeight * cropState.scale / 2) + 'px';
+    img.style.transform       = 'none';
+    img.style.position        = 'absolute';
+    img.style.transformOrigin = '0 0';
+    img.style.width           = img.naturalWidth  * cropState.scale + 'px';
+    img.style.height          = img.naturalHeight * cropState.scale + 'px';
+    img.style.left            = (cx - img.naturalWidth  * cropState.scale / 2) + 'px';
+    img.style.top             = (cy - img.naturalHeight * cropState.scale / 2) + 'px';
 }
 
-// Toast helper
 function showToast(msg) {
     const toast    = document.getElementById('toast');
     const toastMsg = document.getElementById('toast-msg');
@@ -624,12 +630,10 @@ function showToast(msg) {
     setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
-// Initialize charts (placeholder data)
 function initializeCharts() {
-    // Chart akan diisi data real oleh renderChart() setelah fetch
+    // Placeholder — data diisi oleh renderBarChart() setelah fetch
 }
 
-// ── Notifikasi Dropdown Bell ────────────────────────────
 function loadNotifDropdown(pelamar, lowongan) {
     const list = document.getElementById('notif-list');
     const dot  = document.getElementById('ndot');
@@ -637,12 +641,7 @@ function loadNotifDropdown(pelamar, lowongan) {
 
     const notifs = [];
 
-    // 1. Pelamar baru (status pending) — maks 5
-    const pelamarBaru = (pelamar || [])
-        .filter(p => p.application_status === 'pending')
-        .slice(0, 5);
-
-    pelamarBaru.forEach(p => {
+    (pelamar || []).filter(p => p.application_status === 'pending').slice(0, 5).forEach(p => {
         notifs.push({
             color: '#3B82F6',
             text:  `<strong>${p.full_name || 'Seseorang'}</strong> melamar posisi <strong>${p.posisi || '-'}</strong>`,
@@ -652,33 +651,14 @@ function loadNotifDropdown(pelamar, lowongan) {
         });
     });
 
-    // 2. Lowongan pending verifikasi admin
-    const lwPending = (lowongan || [])
-        .filter(l => l.approval_status === 'pending')
-        .slice(0, 3);
-
-    lwPending.forEach(l => {
-        notifs.push({
-            color: '#F59E0B',
-            text:  `Lowongan <strong>${l.title || '-'}</strong> sedang menunggu verifikasi admin`,
-            time:  'Pending',
-        });
+    (lowongan || []).filter(l => l.approval_status === 'pending').slice(0, 3).forEach(l => {
+        notifs.push({ color: '#F59E0B', text: `Lowongan <strong>${l.title || '-'}</strong> sedang menunggu verifikasi admin`, time: 'Pending' });
     });
 
-    // 3. Lowongan yang ditolak admin
-    const lwDitolak = (lowongan || [])
-        .filter(l => l.approval_status === 'rejected')
-        .slice(0, 3);
-
-    lwDitolak.forEach(l => {
-        notifs.push({
-            color: '#DC2626',
-            text:  `Lowongan <strong>${l.title || '-'}</strong> ditolak oleh admin`,
-            time:  'Ditolak',
-        });
+    (lowongan || []).filter(l => l.approval_status === 'rejected').slice(0, 3).forEach(l => {
+        notifs.push({ color: '#DC2626', text: `Lowongan <strong>${l.title || '-'}</strong> ditolak oleh admin`, time: 'Ditolak' });
     });
 
-    // Render
     if (notifs.length === 0) {
         list.innerHTML = `
             <div style="padding:20px 16px;text-align:center;font-size:13px;color:var(--muted)">
@@ -698,13 +678,11 @@ function loadNotifDropdown(pelamar, lowongan) {
             </div>
         </div>`).join('');
 
-    // Tampilkan titik merah di bell
     if (dot) dot.style.display = 'block';
 }
 
-// ── Upload Dokumen ──────────────────────────────────────
 function handleDocumentUpload(event) {
-    const file = event.target.files[0];
+    const file    = event.target.files[0];
     const docList = document.getElementById('doc-list');
     if (!docList || !file) return;
 
@@ -718,7 +696,6 @@ function handleDocumentUpload(event) {
         </div>`;
 }
 
-// Preview image banner lowongan
 function handleImagePreview(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -749,7 +726,6 @@ function clearImagePreview() {
     if (input)       input.value               = '';
 }
 
-// ── Switch Profile Tab ──────────────────────────────────
 function switchProfTab(tab, el) {
     document.querySelectorAll('.prof-tab-content').forEach(t => t.style.display = 'none');
     document.querySelectorAll('.prof-tab').forEach(t => {
@@ -764,7 +740,6 @@ function switchProfTab(tab, el) {
     }
 }
 
-// Submit lowongan baru
 async function handleSubmitLowongan() {
     const form = document.getElementById('form-lowongan');
 
@@ -797,9 +772,7 @@ async function handleSubmitLowongan() {
     try {
         const response = await fetch('/api/internship/store', {
             method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            },
+            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
             body: formData
         });
 
@@ -819,66 +792,49 @@ async function handleSubmitLowongan() {
     }
 }
 
-// Load profil perusahaan
 async function loadProfile() {
     try {
         const response = await fetch('/api/profile');
-        const data = await response.json();
+        const data     = await response.json();
         if (data.success) {
             const c = data.data;
-            
+
             const elName     = document.getElementById('p-name');
             const elIndustry = document.getElementById('p-industry');
             const elDesc     = document.getElementById('p-desc');
-            const elContact  = document.getElementById('p-contact'); // Elemen kontak baru
+            const elContact  = document.getElementById('p-contact');
             const elEmail    = document.getElementById('p-email');
 
             if (elName)     elName.value     = c.company_name   || '';
             if (elIndustry) elIndustry.value = c.industry_field || '';
             if (elDesc)     elDesc.value     = c.description    || '';
-            if (elContact)  elContact.value  = c.contact        || ''; // Isi dari kolom contact DB
+            if (elContact)  elContact.value  = c.contact        || '';
             if (elEmail)    elEmail.value    = c.email          || '';
 
-            // Hitung inisial nama perusahaan untuk placeholder logo
-            const initials = (c.company_name || window.userData?.name || '--')
-                .split(' ')
-                .map(n => n[0])
-                .join('')
-                .substring(0, 2)
-                .toUpperCase();
-
+            const initials    = (c.company_name || window.userData?.name || '--').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
             const placeholder = document.getElementById('logo-placeholder');
-            if (placeholder) {
-                placeholder.textContent = initials;
-            }
+            if (placeholder) placeholder.textContent = initials;
 
-            // Tampilkan logo kalau sudah ada di bucket Supabase
-            const img = document.getElementById('logo-img');
+            const img          = document.getElementById('logo-img');
+            const topbarAvatar = document.getElementById('topbarAvatar');
+
             if (c.company_logo) {
-                if (img) { 
-                    img.src = c.company_logo; 
-                    img.style.display = 'block'; 
-                }
+                if (img) { img.src = c.company_logo; img.style.display = 'block'; }
                 if (placeholder) placeholder.style.display = 'none';
-
-                // Update avatar topbar dengan gambar logo terbaru dari Supabase
-                const topbarAvatar = document.getElementById('topbarAvatar');
                 if (topbarAvatar) {
-                    topbarAvatar.textContent = '';
-                    topbarAvatar.style.backgroundImage = `url('${c.company_logo}')`;
-                    topbarAvatar.style.backgroundSize  = 'cover';
+                    topbarAvatar.textContent              = '';
+                    topbarAvatar.style.backgroundImage    = `url('${c.company_logo}')`;
+                    topbarAvatar.style.backgroundSize     = 'cover';
                     topbarAvatar.style.backgroundPosition = 'center';
-                    topbarAvatar.style.color           = 'transparent';
+                    topbarAvatar.style.color              = 'transparent';
                 }
             } else {
                 if (img) img.style.display = 'none';
                 if (placeholder) placeholder.style.display = 'block';
-                
-                const topbarAvatar = document.getElementById('topbarAvatar');
                 if (topbarAvatar) {
                     topbarAvatar.style.backgroundImage = 'none';
-                    topbarAvatar.textContent = initials;
-                    topbarAvatar.style.color = ''; 
+                    topbarAvatar.textContent           = initials;
+                    topbarAvatar.style.color           = '';
                 }
             }
         }
@@ -887,7 +843,6 @@ async function loadProfile() {
     }
 }
 
-// Menerapkan Crop Logo dan mengupload ke bucket SUPABASE
 function applyCrop() {
     const img = document.getElementById('crop-img');
     if (!img) return;
@@ -895,24 +850,20 @@ function applyCrop() {
     const canvas = document.createElement('canvas');
     canvas.width  = CROP_SIZE;
     canvas.height = CROP_SIZE;
-    const ctx = canvas.getContext('2d');
+    const ctx     = canvas.getContext('2d');
 
-    // Gambar sesuai offset dan scale yang sama dengan preview
-    const cx = CROP_SIZE / 2 - cropState.ox * cropState.scale;
-    const cy = CROP_SIZE / 2 - cropState.oy * cropState.scale;
+    const cx    = CROP_SIZE / 2 - cropState.ox * cropState.scale;
+    const cy    = CROP_SIZE / 2 - cropState.oy * cropState.scale;
     const drawW = img.naturalWidth  * cropState.scale;
     const drawH = img.naturalHeight * cropState.scale;
     ctx.drawImage(img, cx - drawW / 2, cy - drawH / 2, drawW, drawH);
 
-    const croppedDataUrl = canvas.toDataURL('image/png');
-
-    // Update preview logo di form secara instan
-    const previewImg  = document.getElementById('logo-img');
-    const placeholder = document.getElementById('logo-placeholder');
+    const croppedDataUrl  = canvas.toDataURL('image/png');
+    const previewImg      = document.getElementById('logo-img');
+    const placeholder     = document.getElementById('logo-placeholder');
     if (previewImg)  { previewImg.src = croppedDataUrl; previewImg.style.display = 'block'; }
     if (placeholder) { placeholder.style.display = 'none'; }
 
-    // Upload blob ke backend server (kemudian diteruskan ke SUPABASE)
     canvas.toBlob(async (blob) => {
         const formData = new FormData();
         formData.append('logo', blob, 'logo.png');
@@ -926,12 +877,11 @@ function applyCrop() {
             const data = await response.json();
             showToast(data.success ? '✓ ' + data.message : '✗ ' + data.message);
 
-            // JIKA UBAH LOGO BERHASIL -> Update avatar topbar di bagian kanan atas secara langsung
             if (data.success && data.logo_url) {
                 const topbarAvatar = document.getElementById('topbarAvatar');
                 if (topbarAvatar) {
-                    topbarAvatar.textContent              = ''; // Hapus teks inisial
-                    topbarAvatar.style.backgroundImage    = `url('${data.logo_url}')`; // Set URL image Supabase
+                    topbarAvatar.textContent              = '';
+                    topbarAvatar.style.backgroundImage    = `url('${data.logo_url}')`;
                     topbarAvatar.style.backgroundSize     = 'cover';
                     topbarAvatar.style.backgroundPosition = 'center';
                     topbarAvatar.style.color              = 'transparent';
@@ -945,27 +895,23 @@ function applyCrop() {
     }, 'image/png');
 }
 
-// Simpan profil perusahaan
 async function saveProfile(event) {
     event.preventDefault();
 
-    // Pakai FormData agar sinkron dengan $request->input() di CompanyController@updateProfile
     const formData = new FormData();
     formData.append('company_name',   document.getElementById('p-name').value);
     formData.append('industry_field', document.getElementById('p-industry').value);
     formData.append('description',    document.getElementById('p-desc').value);
     formData.append('contact',        document.getElementById('p-contact').value);
 
-    const btn = document.querySelector('#form-profile [type="submit"]');
+    const btn      = document.querySelector('#form-profile [type="submit"]');
     const origText = btn?.innerHTML;
     if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Menyimpan...'; }
 
     try {
         const response = await fetch('/api/profile', {
             method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            },
+            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
             body: formData
         });
 
@@ -986,7 +932,6 @@ async function saveProfile(event) {
     }
 }
 
-// Simpan pengaturan akun (username & phone saja)
 async function handleSaveSettings() {
     const username = document.getElementById('set-username').value.trim();
     const phone    = document.getElementById('set-phone').value.trim();
@@ -996,7 +941,7 @@ async function handleSaveSettings() {
         return;
     }
 
-    const btn = document.querySelector('[onclick="handleSaveSettings()"]');
+    const btn      = document.querySelector('[onclick="handleSaveSettings()"]');
     const origText = btn?.innerHTML;
     if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Menyimpan...'; }
 
@@ -1024,7 +969,6 @@ async function handleSaveSettings() {
     }
 }
 
-// Ganti password — dipanggil dari form#form-password submit
 async function handleSavePassword(event) {
     event.preventDefault();
 
@@ -1045,7 +989,7 @@ async function handleSavePassword(event) {
         return;
     }
 
-    const btn = document.querySelector('#form-password [type="submit"]');
+    const btn      = document.querySelector('#form-password [type="submit"]');
     const origText = btn?.innerHTML;
     if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Menyimpan...'; }
 
@@ -1073,25 +1017,23 @@ async function handleSavePassword(event) {
     }
 }
 
-// ── Edit & Hapus Lowongan (hanya pending) ──────────────
-
 function showEditLowongan(l) {
-    // Isi modal dengan data lowongan
-    document.getElementById('edit-id-internship').value  = l.id_internship;
-    document.getElementById('edit-title').value          = l.title         || '';
-    document.getElementById('edit-work-mode').value      = l.work_mode     || '';
-    document.getElementById('edit-payment').value        = l.payment_status|| '';
-    document.getElementById('edit-location').value       = l.location      || '';
-    document.getElementById('edit-quota').value          = l.quota         || '';
-    document.getElementById('edit-duration').value       = l.duration      || '';
-    document.getElementById('edit-deadline').value       = l.deadline ? l.deadline.substring(0, 10) : '';
-    document.getElementById('edit-description').value    = l.description   || '';
-    document.getElementById('edit-requirement').value    = l.requirement   || '';
-    document.getElementById('edit-benefit').value        = l.benefit       || '';
+    document.getElementById('edit-id-internship').value = l.id_internship;
+    document.getElementById('edit-title').value         = l.title          || '';
+    document.getElementById('edit-work-mode').value     = l.work_mode      || '';
+    document.getElementById('edit-payment').value       = l.payment_status || '';
+    document.getElementById('edit-location').value      = l.location       || '';
+    document.getElementById('edit-quota').value         = l.quota          || '';
+    document.getElementById('edit-duration').value      = l.duration       || '';
+    document.getElementById('edit-deadline').value      = l.deadline ? l.deadline.substring(0, 10) : '';
+    document.getElementById('edit-description').value   = l.description    || '';
+    document.getElementById('edit-requirement').value   = l.requirement    || '';
+    document.getElementById('edit-benefit').value       = l.benefit        || '';
 
-    // Tampilkan dokumen existing
     const docInfo = document.getElementById('edit-doc-existing');
-    if (docInfo) docInfo.textContent = l.supporting_document ? '✓ Dokumen sudah ada (kosongkan jika tidak ingin mengganti)' : 'Belum ada dokumen';
+    if (docInfo) docInfo.textContent = l.supporting_document
+        ? '✓ Dokumen sudah ada (kosongkan jika tidak ingin mengganti)'
+        : 'Belum ada dokumen';
 
     const modal = new bootstrap.Modal(document.getElementById('editLowonganModal'));
     modal.show();
@@ -1099,17 +1041,17 @@ function showEditLowongan(l) {
 
 async function handleEditLowongan() {
     const formData = new FormData();
-    formData.append('id_internship', document.getElementById('edit-id-internship').value);
-    formData.append('title',         document.getElementById('edit-title').value.trim());
-    formData.append('description',   document.getElementById('edit-description').value.trim());
-    formData.append('requirements',  document.getElementById('edit-requirement').value.trim());
-    formData.append('benefit',       document.getElementById('edit-benefit').value.trim());
-    formData.append('location',      document.getElementById('edit-location').value);
-    formData.append('work_mode',     document.getElementById('edit-work-mode').value);
-    formData.append('payment_status',document.getElementById('edit-payment').value);
-    formData.append('quota',         document.getElementById('edit-quota').value);
-    formData.append('duration',      document.getElementById('edit-duration').value.trim());
-    formData.append('deadline',      document.getElementById('edit-deadline').value);
+    formData.append('id_internship',  document.getElementById('edit-id-internship').value);
+    formData.append('title',          document.getElementById('edit-title').value.trim());
+    formData.append('description',    document.getElementById('edit-description').value.trim());
+    formData.append('requirements',   document.getElementById('edit-requirement').value.trim());
+    formData.append('benefit',        document.getElementById('edit-benefit').value.trim());
+    formData.append('location',       document.getElementById('edit-location').value);
+    formData.append('work_mode',      document.getElementById('edit-work-mode').value);
+    formData.append('payment_status', document.getElementById('edit-payment').value);
+    formData.append('quota',          document.getElementById('edit-quota').value);
+    formData.append('duration',       document.getElementById('edit-duration').value.trim());
+    formData.append('deadline',       document.getElementById('edit-deadline').value);
 
     const imageFile = document.getElementById('edit-image')?.files[0];
     if (imageFile) formData.append('image', imageFile);
@@ -1162,6 +1104,7 @@ async function handleDeleteLowongan(idInternship, title) {
         showToast('✗ Terjadi kesalahan, coba lagi.');
     }
 }
+
 function toggleSwitch(el) {
     el.classList.toggle('active');
 }
@@ -1169,27 +1112,22 @@ function toggleSwitch(el) {
 function togglePasswordVisibility(fieldId) {
     const field = document.getElementById(fieldId);
     if (!field) return;
-    
     const isPassword = field.type === 'password';
     field.type = isPassword ? 'text' : 'password';
-    
-    // Update icon - cari button parent lalu cari icon di dalamnya
-    const btn = field.nextElementSibling;
+    const btn  = field.nextElementSibling;
     if (btn) {
         const icon = btn.querySelector('i');
         if (icon) {
-            icon.classList.toggle('bi-eye', !isPassword);
-            icon.classList.toggle('bi-eye-slash', isPassword);
+            icon.classList.toggle('bi-eye',       !isPassword);
+            icon.classList.toggle('bi-eye-slash',  isPassword);
         }
     }
 }
 
 async function loadActivities() {
     try {
-        const response = await fetch('/api/activities');
-        const data = await response.json();
-
-        // Render ke card "Aktivitas Terakhir" di halaman pengaturan
+        const response  = await fetch('/api/activities');
+        const data      = await response.json();
         const container = document.getElementById('activity-log-container');
         if (!container || !data.success) return;
 
@@ -1211,9 +1149,7 @@ async function loadActivities() {
     }
 }
 
-// Update status pelamar
 async function updatePelamarStatus(status) {
-    // Validasi status sesuai enum DB: pending, reviewed, accepted, rejected
     if (!['pending', 'reviewed', 'accepted', 'rejected'].includes(status)) {
         showToast('✗ Status tidak valid');
         return;
@@ -1233,7 +1169,15 @@ async function updatePelamarStatus(status) {
         const data = await response.json();
         showToast(data.success ? '✓ ' + data.message : '✗ ' + data.message);
         if (data.success) {
-            showPage('pelamar', null);
+            // Update objek pelamar di _allPelamar lalu refresh detail yang sedang dibuka
+            const idx = _allPelamar.findIndex(p =>
+                p.id_student === idStudent && p.id_internship === idInternship
+            );
+            if (idx !== -1) {
+                _allPelamar[idx].application_status = status;
+                showDetailPelamar(_allPelamar[idx]);
+            }
+            // Refresh stats & progress di background
             initializeDashboard();
         }
     } catch (e) {
@@ -1244,14 +1188,14 @@ async function updatePelamarStatus(status) {
 async function loadSettings() {
     try {
         const response = await fetch('/api/profile');
-        const data = await response.json();
+        const data     = await response.json();
         if (data.success) {
-            const c = data.data;
-            const emailEl   = document.getElementById('set-email');
-            const phoneEl   = document.getElementById('set-phone');
+            const c          = data.data;
+            const emailEl    = document.getElementById('set-email');
+            const phoneEl    = document.getElementById('set-phone');
             const usernameEl = document.getElementById('set-username');
-            if (emailEl)    emailEl.value    = c.email || '';
-            if (phoneEl)    phoneEl.value    = c.contact || '';
+            if (emailEl)    emailEl.value    = c.email        || '';
+            if (phoneEl)    phoneEl.value    = c.contact      || '';
             if (usernameEl) usernameEl.value = c.company_name || '';
         }
     } catch (e) {
@@ -1259,14 +1203,11 @@ async function loadSettings() {
     }
 }
 
-// Logout
 async function logout() {
     if (confirm('Anda yakin ingin logout?')) {
         await fetch('/logout', {
             method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            }
+            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') }
         });
         window.location.href = '/';
     }
