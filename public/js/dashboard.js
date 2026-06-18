@@ -142,31 +142,7 @@ function renderProgressStatus(pelamar) {
     }).join('');
 }
 
-async function handleLogoPreview(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    if (file.size > 2 * 1024 * 1024) {
-        showToast('✗ Ukuran file maksimal 2MB');
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        // Preview
-        const img = document.getElementById('logo-img');
-        const placeholder = document.getElementById('logo-placeholder');
-        if (img) {
-            img.src = e.target.result;
-            img.style.display = 'block';
-        }
-        if (placeholder) placeholder.style.display = 'none';
-
-        // Init crop
-        initCrop(e.target.result);
-    };
-    reader.readAsDataURL(file);
-}
+// Upload logo dilakukan via applyCrop() menggunakan crop system
 
 // Render aktivitas terbaru dari activity_logs ke #activity-timeline
 async function loadActivitiesTimeline() {
@@ -638,62 +614,6 @@ function _applyCropTransform() {
     img.style.top              = (cy - img.naturalHeight * cropState.scale / 2) + 'px';
 }
 
-function applyCrop() {
-    const img = document.getElementById('crop-img');
-    if (!img) return;
-
-    const canvas = document.createElement('canvas');
-    canvas.width  = CROP_SIZE;
-    canvas.height = CROP_SIZE;
-    const ctx = canvas.getContext('2d');
-
-    // Gambar sesuai offset dan scale yang sama dengan preview
-    const cx = CROP_SIZE / 2 - cropState.ox * cropState.scale;
-    const cy = CROP_SIZE / 2 - cropState.oy * cropState.scale;
-    const drawW = img.naturalWidth  * cropState.scale;
-    const drawH = img.naturalHeight * cropState.scale;
-    ctx.drawImage(img, cx - drawW / 2, cy - drawH / 2, drawW, drawH);
-
-    const croppedDataUrl = canvas.toDataURL('image/png');
-
-    // Update preview logo di form
-    const previewImg  = document.getElementById('logo-img');
-    const placeholder = document.getElementById('logo-placeholder');
-    if (previewImg)  { previewImg.src = croppedDataUrl; previewImg.style.display = 'block'; }
-    if (placeholder) { placeholder.style.display = 'none'; }
-
-    // Upload ke server
-    canvas.toBlob(async (blob) => {
-        const formData = new FormData();
-        formData.append('logo', blob, 'logo.png');
-
-        try {
-            const response = await fetch('/api/profile/logo', {
-                method: 'POST',
-                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
-                body: formData
-            });
-            const data = await response.json();
-            showToast(data.success ? '✓ ' + data.message : '✗ ' + data.message);
-
-            // Update topbar avatar
-            const topbarAvatar = document.getElementById('topbarAvatar');
-            if (topbarAvatar && data.logo_url) {
-                topbarAvatar.textContent              = '';
-                topbarAvatar.style.backgroundImage    = `url('${data.logo_url}')`;
-                topbarAvatar.style.backgroundSize     = 'cover';
-                topbarAvatar.style.backgroundPosition = 'center';
-                topbarAvatar.style.color              = 'transparent';
-            }
-
-            document.getElementById('crop-container').style.display = 'none';
-        } catch (e) {
-            showToast('✗ Gagal upload logo.');
-        }
-    }, 'image/png');
-}
-
-
 // Toast helper
 function showToast(msg) {
     const toast    = document.getElementById('toast');
@@ -906,30 +826,59 @@ async function loadProfile() {
         const data = await response.json();
         if (data.success) {
             const c = data.data;
-            // Field yang ada di DB: company_name, industry_field, description, contact, company_logo, email
-            const elName    = document.getElementById('prof-company-name');
-            const elIndustry = document.getElementById('prof-industry');
-            const elDesc    = document.getElementById('prof-description');
-            const elPhone   = document.getElementById('prof-phone');
+            
+            const elName     = document.getElementById('p-name');
+            const elIndustry = document.getElementById('p-industry');
+            const elDesc     = document.getElementById('p-desc');
+            const elContact  = document.getElementById('p-contact'); // Elemen kontak baru
+            const elEmail    = document.getElementById('p-email');
 
             if (elName)     elName.value     = c.company_name   || '';
             if (elIndustry) elIndustry.value = c.industry_field || '';
             if (elDesc)     elDesc.value     = c.description    || '';
-            if (elPhone)    elPhone.value    = c.contact        || '';
+            if (elContact)  elContact.value  = c.contact        || ''; // Isi dari kolom contact DB
+            if (elEmail)    elEmail.value    = c.email          || '';
 
-            // Tampilkan logo kalau ada
+            // Hitung inisial nama perusahaan untuk placeholder logo
+            const initials = (c.company_name || window.userData?.name || '--')
+                .split(' ')
+                .map(n => n[0])
+                .join('')
+                .substring(0, 2)
+                .toUpperCase();
+
+            const placeholder = document.getElementById('logo-placeholder');
+            if (placeholder) {
+                placeholder.textContent = initials;
+            }
+
+            // Tampilkan logo kalau sudah ada di bucket Supabase
+            const img = document.getElementById('logo-img');
             if (c.company_logo) {
-                const img         = document.getElementById('logo-img');
-                const placeholder = document.getElementById('logo-placeholder');
-                if (img) { img.src = c.company_logo; img.style.display = 'block'; }
+                if (img) { 
+                    img.src = c.company_logo; 
+                    img.style.display = 'block'; 
+                }
                 if (placeholder) placeholder.style.display = 'none';
 
-                // Update avatar topbar juga
+                // Update avatar topbar dengan gambar logo terbaru dari Supabase
                 const topbarAvatar = document.getElementById('topbarAvatar');
                 if (topbarAvatar) {
+                    topbarAvatar.textContent = '';
                     topbarAvatar.style.backgroundImage = `url('${c.company_logo}')`;
                     topbarAvatar.style.backgroundSize  = 'cover';
+                    topbarAvatar.style.backgroundPosition = 'center';
                     topbarAvatar.style.color           = 'transparent';
+                }
+            } else {
+                if (img) img.style.display = 'none';
+                if (placeholder) placeholder.style.display = 'block';
+                
+                const topbarAvatar = document.getElementById('topbarAvatar');
+                if (topbarAvatar) {
+                    topbarAvatar.style.backgroundImage = 'none';
+                    topbarAvatar.textContent = initials;
+                    topbarAvatar.style.color = ''; 
                 }
             }
         }
@@ -938,89 +887,190 @@ async function loadProfile() {
     }
 }
 
-// Simpan profil
-async function handleSaveProfile() {
-    const payload = {
-        company_name:   document.getElementById('prof-company-name').value.trim(),
-        industry_field: document.getElementById('prof-industry').value.trim(),
-        description:    document.getElementById('prof-description').value.trim(),
-        contact:        document.getElementById('prof-phone').value.trim(),
-    };
+// Menerapkan Crop Logo dan mengupload ke bucket SUPABASE
+function applyCrop() {
+    const img = document.getElementById('crop-img');
+    if (!img) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width  = CROP_SIZE;
+    canvas.height = CROP_SIZE;
+    const ctx = canvas.getContext('2d');
+
+    // Gambar sesuai offset dan scale yang sama dengan preview
+    const cx = CROP_SIZE / 2 - cropState.ox * cropState.scale;
+    const cy = CROP_SIZE / 2 - cropState.oy * cropState.scale;
+    const drawW = img.naturalWidth  * cropState.scale;
+    const drawH = img.naturalHeight * cropState.scale;
+    ctx.drawImage(img, cx - drawW / 2, cy - drawH / 2, drawW, drawH);
+
+    const croppedDataUrl = canvas.toDataURL('image/png');
+
+    // Update preview logo di form secara instan
+    const previewImg  = document.getElementById('logo-img');
+    const placeholder = document.getElementById('logo-placeholder');
+    if (previewImg)  { previewImg.src = croppedDataUrl; previewImg.style.display = 'block'; }
+    if (placeholder) { placeholder.style.display = 'none'; }
+
+    // Upload blob ke backend server (kemudian diteruskan ke SUPABASE)
+    canvas.toBlob(async (blob) => {
+        const formData = new FormData();
+        formData.append('logo', blob, 'logo.png');
+
+        try {
+            const response = await fetch('/api/profile/logo', {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
+                body: formData
+            });
+            const data = await response.json();
+            showToast(data.success ? '✓ ' + data.message : '✗ ' + data.message);
+
+            // JIKA UBAH LOGO BERHASIL -> Update avatar topbar di bagian kanan atas secara langsung
+            if (data.success && data.logo_url) {
+                const topbarAvatar = document.getElementById('topbarAvatar');
+                if (topbarAvatar) {
+                    topbarAvatar.textContent              = ''; // Hapus teks inisial
+                    topbarAvatar.style.backgroundImage    = `url('${data.logo_url}')`; // Set URL image Supabase
+                    topbarAvatar.style.backgroundSize     = 'cover';
+                    topbarAvatar.style.backgroundPosition = 'center';
+                    topbarAvatar.style.color              = 'transparent';
+                }
+            }
+
+            document.getElementById('crop-container').style.display = 'none';
+        } catch (e) {
+            showToast('✗ Gagal upload logo.');
+        }
+    }, 'image/png');
+}
+
+// Simpan profil perusahaan
+async function saveProfile(event) {
+    event.preventDefault();
+
+    // Pakai FormData agar sinkron dengan $request->input() di CompanyController@updateProfile
+    const formData = new FormData();
+    formData.append('company_name',   document.getElementById('p-name').value);
+    formData.append('industry_field', document.getElementById('p-industry').value);
+    formData.append('description',    document.getElementById('p-desc').value);
+    formData.append('contact',        document.getElementById('p-contact').value);
+
+    const btn = document.querySelector('#form-profile [type="submit"]');
+    const origText = btn?.innerHTML;
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Menyimpan...'; }
 
     try {
-        const response = await fetch('/api/profile/update', {
+        const response = await fetch('/api/profile', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: formData
+        });
+
+        const data = await response.json();
+        showToast(data.success ? '✓ Profil berhasil diperbarui' : '✗ ' + (data.message || 'Gagal memperbarui profil'));
+
+        if (data.success) {
+            if (window.userData) window.userData.name = formData.get('company_name');
+            const greetName = document.getElementById('greetName');
+            if (greetName) greetName.textContent = formData.get('company_name');
+            await loadProfile();
+        }
+    } catch (e) {
+        console.error(e);
+        showToast('✗ Terjadi kesalahan saat menyimpan data.');
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = origText; }
+    }
+}
+
+// Simpan pengaturan akun (username & phone saja)
+async function handleSaveSettings() {
+    const username = document.getElementById('set-username').value.trim();
+    const phone    = document.getElementById('set-phone').value.trim();
+
+    if (!username) {
+        showToast('✗ Nama pengguna tidak boleh kosong.');
+        return;
+    }
+
+    const btn = document.querySelector('[onclick="handleSaveSettings()"]');
+    const origText = btn?.innerHTML;
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Menyimpan...'; }
+
+    try {
+        const res = await fetch('/api/settings/update', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
             },
-            body: JSON.stringify(payload)
+            body: JSON.stringify({ username, phone })
         });
-        const data = await response.json();
-        showToast(data.success ? '✓ ' + data.message : '✗ ' + data.message);
+        const d = await res.json();
+        showToast(d.success ? '✓ Pengaturan berhasil disimpan!' : '✗ ' + d.message);
+
+        if (d.success && window.userData) {
+            window.userData.name = username;
+            const greetName = document.getElementById('greetName');
+            if (greetName) greetName.textContent = username;
+        }
     } catch (e) {
-        showToast('✗ Terjadi kesalahan, coba lagi.');
+        showToast('✗ Gagal update pengaturan.');
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = origText; }
     }
 }
 
-// Simpan pengaturan (ganti password)
-async function handleSaveSettings() {
-    const username = document.getElementById('set-username').value.trim();
-    const phone    = document.getElementById('set-phone').value.trim();
+// Ganti password — dipanggil dari form#form-password submit
+async function handleSavePassword(event) {
+    event.preventDefault();
+
     const oldPass  = document.getElementById('set-current-pass').value;
     const newPass  = document.getElementById('set-new-pass').value;
     const confPass = document.getElementById('set-confirm-pass').value;
 
-    // Update username & phone
-    if (username) {
-        try {
-            const res = await fetch('/api/settings/update', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                },
-                body: JSON.stringify({ username, phone })
-            });
-            const d = await res.json();
-            if (!d.success) { showToast('✗ ' + d.message); return; }
-        } catch (e) {
-            showToast('✗ Gagal update pengaturan.');
-            return;
-        }
+    if (!oldPass || !newPass || !confPass) {
+        showToast('✗ Semua field password wajib diisi.');
+        return;
+    }
+    if (newPass !== confPass) {
+        showToast('✗ Konfirmasi password tidak cocok.');
+        return;
+    }
+    if (newPass.length < 8) {
+        showToast('✗ Password baru minimal 8 karakter.');
+        return;
     }
 
-    // Ganti password kalau diisi
-    if (oldPass || newPass) {
-        if (newPass !== confPass) {
-            showToast('✗ Konfirmasi password tidak cocok.');
-            return;
-        }
-        if (newPass.length < 6) {
-            showToast('✗ Password baru minimal 6 karakter.');
-            return;
-        }
-        try {
-            const res = await fetch('/api/profile/password', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                },
-                body: JSON.stringify({ old_password: oldPass, new_password: newPass })
-            });
-            const d = await res.json();
-            if (!d.success) { showToast('✗ ' + d.message); return; }
+    const btn = document.querySelector('#form-password [type="submit"]');
+    const origText = btn?.innerHTML;
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Menyimpan...'; }
+
+    try {
+        const res = await fetch('/api/profile/password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({ old_password: oldPass, new_password: newPass })
+        });
+        const d = await res.json();
+        showToast(d.success ? '✓ Password berhasil diubah!' : '✗ ' + d.message);
+
+        if (d.success) {
             document.getElementById('set-current-pass').value = '';
             document.getElementById('set-new-pass').value     = '';
             document.getElementById('set-confirm-pass').value = '';
-        } catch (e) {
-            showToast('✗ Gagal ganti password.');
-            return;
         }
+    } catch (e) {
+        showToast('✗ Gagal ganti password.');
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = origText; }
     }
-
-    showToast('✓ Pengaturan berhasil disimpan!');
 }
 
 // ── Edit & Hapus Lowongan (hanya pending) ──────────────

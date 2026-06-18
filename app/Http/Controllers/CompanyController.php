@@ -59,14 +59,15 @@ class CompanyController extends Controller
         return response()->json(['success' => true, 'data' => $company]);
     }
 
-    public function updateProfile(Request $request)
+public function updateProfile(Request $request)
     {
-        $companyId   = session('type_id');
-        $data        = $request->json()->all();
-        $name        = trim($data['company_name'] ?? '');
-        $industry    = trim($data['industry_field'] ?? '');
-        $description = trim($data['description'] ?? '');
-        $contact     = trim($data['contact'] ?? '');
+        $companyId = session('type_id');
+        
+        // SINKRONISASI: Menggunakan $request->input() agar bisa membaca data dari FormData JavaScript
+        $name        = trim($request->input('company_name') ?? '');
+        $industry    = trim($request->input('industry_field') ?? '');
+        $description = trim($request->input('description') ?? '');
+        $contact     = trim($request->input('contact') ?? '');
 
         if (empty($name)) {
             return response()->json(['success' => false, 'message' => 'Nama perusahaan tidak boleh kosong'], 400);
@@ -85,7 +86,7 @@ class CompanyController extends Controller
         return response()->json(['success' => true, 'message' => 'Profil berhasil disimpan']);
     }
 
-    public function updateLogo(Request $request)
+public function updateLogo(Request $request)
     {
         $companyId = session('type_id');
 
@@ -107,12 +108,19 @@ class CompanyController extends Controller
             return response()->json(['success' => false, 'message' => 'Gagal upload logo: ' . $result['error']], 500);
         }
 
-        // Hapus logo lama dari Supabase kalau ada, supaya storage tidak menumpuk
+        // Hapus logo lama dari Supabase jika sebelumnya sudah ada, agar storage tidak penuh
         $old = DB::table('companies')->where('id_company', $companyId)->first();
         if (!empty($old?->company_logo)) {
-            $this->storage->delete('logo-comp', $old->company_logo);
+            // Selalu simpan path relatif di DB — strip public URL prefix jika data lama sudah pakai URL penuh
+            $oldPath = $old->company_logo;
+            $supabasePublicPrefix = rtrim(config('services.supabase.url'), '/') . '/storage/v1/object/public/logo-comp/';
+            if (str_starts_with($oldPath, 'http')) {
+                $oldPath = str_replace($supabasePublicPrefix, '', $oldPath);
+            }
+            $this->storage->delete('logo-comp', $oldPath);
         }
 
+        // Simpan PATH RELATIF ke DB (bukan public URL), resolusi ke URL dilakukan di getProfile
         DB::table('companies')->where('id_company', $companyId)->update([
             'company_logo' => $result['path'],
         ]);
@@ -125,13 +133,18 @@ class CompanyController extends Controller
             'logo_url' => $result['public_url'],
         ]);
     }
-
-    public function updateSettings(Request $request)
+    
+public function updateSettings(Request $request)
     {
         $companyId = session('type_id');
-        $data      = $request->json()->all();
-        $username  = trim($data['username'] ?? '');
-        $phone     = trim($data['phone'] ?? '');
+        
+        // SINKRONISASI: Menggunakan $request->input() agar sinkron dengan input pengaturan di dashboard.js
+        $username  = trim($request->input('username') ?? '');
+        $phone     = trim($request->input('phone') ?? '');
+
+        if (empty($username)) {
+            return response()->json(['success' => false, 'message' => 'Username/Nama tidak boleh kosong'], 400);
+        }
 
         DB::table('companies')->where('id_company', $companyId)->update([
             'company_name' => $username,

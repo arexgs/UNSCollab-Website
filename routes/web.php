@@ -42,6 +42,7 @@ Route::delete('/daftar-team/hapus/{id}', [TeamController::class, 'destroy']);
 // ── API (Company) ──
 Route::get('/api/dashboard', [DashboardController::class, 'getData']);
 Route::get('/api/profile', [CompanyController::class, 'getProfile']);
+Route::post('/api/profile', [CompanyController::class, 'updateProfile']);
 Route::post('/api/profile/update', [CompanyController::class, 'updateProfile']);
 Route::post('/api/profile/password', [CompanyController::class, 'updatePassword']);
 Route::post('/api/profile/logo', [CompanyController::class, 'updateLogo']);

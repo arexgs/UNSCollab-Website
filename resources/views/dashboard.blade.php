@@ -1002,101 +1002,67 @@
     </div>
 
     <!-- ═══════════════ PROFIL ═══════════════ -->
-    <div class="page" id="page-profil" style="display:none">
-      <div class="pg-header">
-        <div>
-          <h4>Profil Perusahaan</h4>
-          <p>Kelola informasi dan data perusahaan Anda</p>
-        </div>
-      </div>
-
-      <!-- Profile Tabs -->
-      <ul class="nav nav-tabs mb-3" style="gap:0">
-        <li class="nav-item"><a class="prof-tab nav-link active" style="border-bottom:3px solid var(--brand);color:var(--brand);cursor:pointer" onclick="switchProfTab('info',this)">Informasi Dasar</a></li>
-      </ul>
-
-      <!-- Tab: Informasi Dasar -->
-      <div class="prof-tab-content" id="tab-info">
-        <div class="ui-card mb-3">
-          <div class="card-head"><h6><i class="bi bi-building me-2" style="color:var(--brand)"></i>Data Perusahaan</h6></div>
-          <!-- Logo Perusahaan -->
-          <div class="ui-card mb-3">
-              <div class="card-head"><h6><i class="bi bi-image me-2" style="color:var(--brand)"></i>Logo Perusahaan</h6></div>
-              <div class="d-flex align-items-center gap-4">
-                  <!-- Preview Logo -->
-                  <div id="logo-preview" style="width:100px;height:100px;border-radius:12px;background:var(--surface2);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
-                      <i class="bi bi-building" style="font-size:32px;color:var(--muted)" id="logo-placeholder"></i>
-                      <img id="logo-img" src="" style="display:none;width:100%;height:100%;object-fit:cover">
-                  </div>
-                  <div>
-                      <p style="font-size:13px;margin-bottom:8px;color:var(--muted)">Format: JPG, PNG, WebP. Maks 2MB. Rekomendasi: 200×200px</p>
-                      <input type="file" id="logo-input" style="display:none" accept=".jpg,.jpeg,.png,.webp" onchange="handleLogoPreview(event)">
-                      <button class="btn-brand" onclick="document.getElementById('logo-input').click()">
-                          <i class="bi bi-upload"></i> Pilih Logo
-                      </button>
-                  </div>
-              </div>
-                  <!-- Crop area -->
-<div id="crop-container" style="display:none;margin-top:16px">
-    <p style="font-size:12px;color:var(--muted);margin-bottom:8px">
-        Geser untuk reposisi · Scroll atau pinch untuk zoom
-    </p>
-    <div class="crop-viewport" style="
-        position:relative;
-        width:360px; height:360px;
-        overflow:hidden;
-        border-radius:12px;
-        border:2px solid var(--border);
-        margin-bottom:10px;
-        cursor:grab;
-        background:#000;
-        touch-action:none;
-    ">
-        <img id="crop-img" draggable="false" style="position:absolute;user-select:none;-webkit-user-drag:none;">
-        <!-- Garis panduan tengah (opsional) -->
-        <div style="pointer-events:none;position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr 1fr">
-            <div style="border:1px solid rgba(255,255,255,.25)"></div><div style="border:1px solid rgba(255,255,255,.25)"></div><div style="border:1px solid rgba(255,255,255,.25)"></div>
-            <div style="border:1px solid rgba(255,255,255,.25)"></div><div style="border:1px solid rgba(255,255,255,.25)"></div><div style="border:1px solid rgba(255,255,255,.25)"></div>
-            <div style="border:1px solid rgba(255,255,255,.25)"></div><div style="border:1px solid rgba(255,255,255,.25)"></div><div style="border:1px solid rgba(255,255,255,.25)"></div>
-        </div>
+<div class="page" id="page-profil" style="display:none">
+  <div class="pg-header">
+    <div>
+      <h4>Profil Perusahaan</h4>
+      <p>Kelola informasi publik perusahaan Anda</p>
     </div>
-    <div class="d-flex align-items-center gap-2 mb-3">
-        <i class="bi bi-zoom-out" style="color:var(--muted)"></i>
-        <input type="range" id="crop-zoom" min="100" max="400" value="100"
-               style="flex:1" oninput="handleCropZoom(this.value)">
-        <i class="bi bi-zoom-in" style="color:var(--muted)"></i>
-    </div>
-    <button class="btn-brand" onclick="applyCrop()">
-        <i class="bi bi-check-lg"></i> Terapkan & Upload
-    </button>
-</div>
-</div>
-</div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-8">
+      <div class="ui-card mb-3">
+        <div class="card-head"><h6><i class="bi bi-info-circle-fill me-2" style="color:var(--brand)"></i>Informasi Umum</h6></div>
+        <form id="form-profile" onsubmit="saveProfile(event)">
           <div class="row g-3">
             <div class="col-md-6">
-              <label class="form-label">Nama Perusahaan <span style="color:#DC2626">*</span></label>
-              <input type="text" class="form-control" id="prof-company-name" placeholder="Nama perusahaan">
+              <label class="form-label font-weight-600">Nama Perusahaan</label>
+              <input type="text" class="form-control" id="p-name" required>
             </div>
             <div class="col-md-6">
-              <label class="form-label">Bidang Industri</label>
-              <input type="text" class="form-control" id="prof-industry" placeholder="cth. Teknologi, Desain, Marketing">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">No. Telepon Kantor</label>
-              <input type="tel" class="form-control" id="prof-phone" placeholder="+62-21-xxxx-xxxx">
+              <label class="form-label font-weight-600">Industri / Sektor</label>
+              <input type="text" class="form-control" id="p-industry" placeholder="Contoh: Teknologi, Finansial">
             </div>
             <div class="col-12">
-              <label class="form-label">Deskripsi Perusahaan</label>
-              <textarea class="form-control" id="prof-description" rows="4" placeholder="Jelaskan tentang perusahaan Anda, visi, misi, dan lainnya..."></textarea>
+              <label class="form-label font-weight-600">Deskripsi Singkat</label>
+              <textarea class="form-control" id="p-desc" rows="3" placeholder="Gambarkan perusahaan Anda..."></textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label font-weight-600">Kontak / No. Telepon Perusahaan</label>
+              <input type="text" class="form-control" id="p-contact" placeholder="Contoh: 08123456xxx">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label font-weight-600">Email Akun (Read-only)</label>
+              <input type="email" class="form-control" id="p-email" readonly style="background-color: #f1f3f5; cursor: not-allowed;">
             </div>
           </div>
-        </div>
-      </div>
-      <div class="d-flex justify-content-end gap-2 mt-3">
-        <button class="btn-brand" onclick="handleSaveProfile()"><i class="bi bi-check-lg"></i> Simpan Profil</button>
+          <div class="d-flex justify-content-end mt-4">
+            <button type="submit" class="btn-brand">
+              <i class="bi bi-save me-1"></i> Simpan Profil
+            </button>
+          </div>
+        </form>
       </div>
     </div>
     
+    <div class="col-md-4">
+      <div class="ui-card">
+        <div class="card-head"><h6>Logos & Media</h6></div>
+        <div class="text-center p-3">
+          <div class="big-avatar mx-auto mb-3" style="width:80px; height:80px; font-size:28px; position:relative; overflow:hidden; display:grid; place-items:center;">
+            <span id="logo-placeholder">--</span>
+            <img id="logo-img" src="" alt="Logo" style="display:none; width:100%; height:100%; object-fit:cover; position:absolute; top:0; left:0;">
+          </div>
+          <button type="button" class="btn-outline btn-sm w-100" onclick="document.getElementById('p-avatar').click()">
+            <i class="bi bi-camera me-1"></i> Ubah Logo
+          </button>
+          <input type="file" id="p-avatar" accept="image/*" style="display:none" onchange="openCropModal(event)">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
           <!-- ═══════════════ PENGATURAN ═══════════════ -->
     <div class="page" id="page-pengaturan" style="display:none">
       <div class="pg-header">
@@ -1141,11 +1107,16 @@
           <!-- Security -->
           <div class="ui-card mb-3">
             <div class="card-head"><h6><i class="bi bi-shield-lock me-2" style="color:#6366F1"></i>Keamanan Akun</h6></div>
+            <form id="form-password" onsubmit="handleSavePassword(event)">
+            {{-- Hidden username field for browser password manager accessibility --}}
+            <input type="text" id="form-password-username" autocomplete="username"
+                   style="display:none" aria-hidden="true"
+                   value="{{ session('user_email') }}">
             <div class="row g-3">
               <div class="col-md-6">
                 <label class="form-label">Password Saat Ini</label>
                 <div class="input-group mb-2">
-                  <input type="password" class="form-control" id="set-current-pass" placeholder="Masukkan password lama">
+                  <input type="password" class="form-control" id="set-current-pass" placeholder="Masukkan password lama" autocomplete="current-password">
                   <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('set-current-pass')">
                     <i class="bi bi-eye"></i>
                   </button>
@@ -1155,7 +1126,7 @@
               <div class="col-md-6">
                 <label class="form-label">Password Baru</label>
                 <div class="input-group mb-2">
-                  <input type="password" class="form-control" id="set-new-pass" placeholder="Minimal 8 karakter">
+                  <input type="password" class="form-control" id="set-new-pass" placeholder="Minimal 8 karakter" autocomplete="new-password">
                   <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('set-new-pass')">
                     <i class="bi bi-eye"></i>
                   </button>
@@ -1164,7 +1135,7 @@
               <div class="col-md-6">
                 <label class="form-label">Konfirmasi Password Baru</label>
                 <div class="input-group mb-2">
-                  <input type="password" class="form-control" id="set-confirm-pass" placeholder="Ulangi password baru">
+                  <input type="password" class="form-control" id="set-confirm-pass" placeholder="Ulangi password baru" autocomplete="new-password">
                   <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('set-confirm-pass')">
                     <i class="bi bi-eye"></i>
                   </button>
@@ -1174,6 +1145,10 @@
             <small style="color:var(--muted);display:block;margin-top:12px">
               <i class="bi bi-info-circle"></i> Password harus minimal 8 karakter, kombinasi huruf besar, kecil, angka, dan simbol.
             </small>
+            <div class="d-flex justify-content-end mt-3">
+              <button type="submit" class="btn-brand"><i class="bi bi-shield-check me-1"></i> Ganti Password</button>
+            </div>
+            </form>
           </div>
 
           <!-- Notifications -->
@@ -1457,16 +1432,12 @@
         overlay.classList.remove('show');
         toggleSidebar.classList.remove('open');
     }
-
-
 </script>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="{{ asset('js/dashboard.js') }}"></script>
-
-
-
 
 </body>
 </html>

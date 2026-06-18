@@ -121,48 +121,28 @@ function formatTanggalIndo($dateString) {
                             <th>Aksi</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @forelse ($daftarDokumen as $dokumen)
-                            <tr class="border-bottom">
-                                <td class="py-3">
-                                    <div class="d-flex align-items-center">
-                                        <div class="text-white p-2 me-3 d-flex align-items-center justify-content-center fw-bold"
-                                             style="width:40px;height:40px;background:#1FABE1;border-radius:10px;">
-                                            {{ strtoupper(substr($dokumen->company_name, 0, 1)) }}
-                                        </div>
-                                        <span class="fw-bold">{{ $dokumen->company_name }}</span>
-                                    </div>
-                                </td>
-                                <td>{{ $dokumen->internship_title }}</td>
-                                <td>
-                                    @if($dokumen->apply_date)
-                                        {{ \Carbon\Carbon::parse($dokumen->apply_date)->locale('id')->isoFormat('D MMM YYYY') }}
-                                    @else
-                                        -
-                                    @endif
-                                </td>
-                                <td>
-                                    @php $s = strtolower($dokumen->status); @endphp
-                                    @if($s === 'pending')
-                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1 rounded">Pending</span>
-                                    @elseif($s === 'accepted')
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded">Diterima</span>
-                                    @else
-                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 rounded">Ditolak</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <a href="{{ url('/validasi-magang') }}" class="btn btn-sm btn-outline-secondary rounded-3">
-                                        <i class="bi bi-eye"></i> Verifikasi
-                                    </a>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="5" class="text-center py-4 text-muted">Tidak ada data pengajuan magang.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
+<tbody>
+    @forelse($daftarTeam as $fb)
+        <tr class="border-bottom">
+            <td class="py-3">
+                <span class="fw-bold d-block">{{ $fb->student_name ?? $fb->team_name }}</span>
+                <small class="text-muted">{{ $fb->student_nim ?? '-' }}</small>
+            </td>
+            <td>
+                <span class="badge px-2 py-1"
+                      style="background:rgba(31,171,225,0.1);color:#1FABE1;border-radius:10px;font-weight:600;">
+                    {{ $fb->category }}
+                </span>
+            </td>
+            <td class="text-truncate" style="max-width:250px;">{{ $fb->description }}</td>
+            <td>{{ \Carbon\Carbon::parse($fb->created_at)->locale('id')->isoFormat('D MMM YYYY') }}</td>
+        </tr>
+    @empty
+        <tr>
+            <td colspan="4" class="text-center py-4 text-muted">Belum ada tim mahasiswa terdaftar.</td>
+        </tr>
+    @endforelse
+</tbody>
                 </table>
             </div>
         </div>
