@@ -26,13 +26,12 @@ Route::post('/logout', function (Request $request) {
 // ── Company Dashboard ──
 Route::get('/dashboard', [DashboardController::class, 'index']);
 
-// ── Admin Dashboard ──
-Route::get('/admin-dashboard', [DashboardController::class, 'adminIndex']);
+// ── Admin Dashboard (TAMBAHAN DARI AdminV01) ──
+Route::get('/dashboard-admin', [DashboardController::class, 'adminIndex']);
 Route::get('/validasi-magang', [DashboardController::class, 'validasiMagang']);
 Route::get('/validasi-magang/proses', [DashboardController::class, 'prosesValidasi']);
 
-// FIX #3: Pakai CompanyController untuk daftarPerusahaan (bukan companyController lowercase)
-// karena CompanyController yang punya method index() + destroy() + data chart
+// ── Company Management ──
 Route::get('/daftar-perusahaan', [CompanyController::class, 'index']);
 Route::get('/daftar-perusahaan/hapus/{id}', [CompanyController::class, 'destroy']);
 

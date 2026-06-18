@@ -124,23 +124,12 @@ public function index()
             ->limit(5)
             ->get();
 
-$daftarTeam = DB::table('teams')
-            ->leftJoin('students', 'teams.id_creator', '=', 'students.id_student')
-            ->select(
-                'teams.*', 
-                'students.full_name as student_name', 
-                'students.nim as student_nim'
-            )
-            ->orderBy('teams.created_at', 'desc')
-            ->get();
-                        
         return view('admin-dashboard', compact(
             'totalCompany',
             'totalTeam',
             'totalPending',
             'daftarDokumen',
-            'daftarFeedback',
-            'daftarTeam'
+            'daftarFeedback'
         ));
     }
 

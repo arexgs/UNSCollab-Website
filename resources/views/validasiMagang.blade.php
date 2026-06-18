@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UNSCollab - Validasi Dokumen Mitra</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.0/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="{{ asset('style.css') }}" />      
 </head>
 <body>
@@ -18,7 +18,7 @@
 
         <div class="nav-label">Menu Utama</div>
         <nav class="d-flex flex-column">
-            <a class="nav-link-item {{ request()->is('admin-dashboard') ? 'active' : '' }}" href="{{ url('/admin-dashboard') }}">
+            <a class="nav-link-item" href="{{ url('/dashboard-admin') }}">
                 <i class="bi bi-grid-1x2"></i> Dashboard
             </a> 
             <a class="nav-link-item active" href="{{ url('/validasi-magang') }}">
@@ -42,7 +42,7 @@
         <div class="sidebar-bottom">
             <form action="{{ url('/logout') }}" method="POST" class="d-inline w-100">
                 @csrf
-                <button type="submit" class="nav-link-item text-danger border-0 bg-transparent w-100" style="text-align: left;">
+                <button type="submit" class="nav-link-item text-danger border-0 bg-transparent w-100 text-start">
                     <i class="bi bi-box-arrow-left"></i> Keluar
                 </button>
             </form>
@@ -67,7 +67,7 @@
                 <div class="card custom-card p-3">
                     <div class="card-body">
                         <p class="text-muted mb-1">Menunggu Validasi</p>
-                        <h3 class="fw-bold">{{ $totalPending }}</h3>
+                        <h3 class="fw-bold mb-1">{{ $totalPending }}</h3>
                         <small class="text-warning fw-bold">Perlu dicek segera</small>
                     </div>
                 </div>
@@ -76,7 +76,7 @@
                 <div class="card custom-card p-3">
                     <div class="card-body">
                         <p class="text-muted mb-1">Telah Disetujui</p>
-                        <h3 class="fw-bold">{{ $totalAccepted }}</h3>
+                        <h3 class="fw-bold mb-1">{{ $totalAccepted }}</h3>
                         <small class="text-success fw-bold"><i class="bi bi-check-circle"></i> Lowongan Aktif</small>
                     </div>
                 </div>
@@ -115,7 +115,7 @@
                         <tr>
                             <th>Perusahaan</th>
                             <th>Posisi Lowongan</th>
-                            <th>Dokumen Pendukung</th>
+                            <th style="max-width: 200px;">Dokumen Pendukung</th>
                             <th>Batas Pendaftaran</th>
                             <th>Status Verifikasi</th>
                             <th>Aksi</th>
@@ -125,39 +125,44 @@
                         @if (count($daftarLowongan) > 0)
                             @foreach ($daftarLowongan as $row)
                                 @php 
-                                    $hasDocument = !empty($row->supporting_document);
-                                    $fileName    = $hasDocument ? basename($row->supporting_document) : 'Belum ada dokumen';
-                                    $fileLink    = $hasDocument 
-                                        ? config('services.supabase.url') . '/storage/v1/object/public/dokumen-pendukung/' . $row->supporting_document
-                                        : '#';
+                                    $fileName = $row->supporting_document ? basename($row->supporting_document) : 'MOU_Mitra_Undef.pdf';
+                                    $fileLink = $row->file_url ?? asset('uploads/' . $fileName);
+                                    
+                                    // Mengambil inisial huruf pertama nama perusahaan
+                                    $initial = strtoupper(substr(trim(strip_tags($row->company_name)), 0, 1));
+                                    if(empty($initial)) {
+                                        $initial = 'M';
+                                    }
                                 @endphp
                                 <tr class="border-bottom">
                                     <td class="py-3">
                                         <div class="d-flex align-items-center">
-                                            <div class="bg-primary text-white p-2 rounded-3 me-3" style="width: 40px; text-align: center; font-weight: bold;">
-                                                {{ strtoupper(substr($row->company_name, 0, 1)) }}
+                                            <div class="text-white rounded-3 me-3 d-flex align-items-center justify-content-center shadow-sm" 
+                                                 style="width: 40px; height: 40px; min-width: 40px; font-weight: bold; font-size: 1.1rem; background-color: #1FABE1; flex-shrink: 0;">
+                                                {{ $initial }}
                                             </div>
+                                            
                                             <div>
-                                                <span class="fw-bold d-block">{{ $row->company_name }}</span>
-                                                <small class="text-muted">{{ $row->industry_field }}</small>
+                                                <span class="fw-bold d-block text-dark" style="font-size: 14.5px;">{{ $row->company_name }}</span>
+                                                <small class="text-muted">{{ $row->industry_field ?? 'Mitra' }}</small>
                                             </div>
                                         </div>
                                     </td>
                                     <td>
-                                        <span class="fw-semibold">{{ $row->internship_title }}</span>
+                                        <span class="fw-semibold text-dark">{{ $row->internship_title }}</span>
                                         <small class="text-muted d-block"><i class="bi bi-geo-alt"></i> {{ $row->location }}</small>
                                     </td>
-                                    <td>
-                                        @if($hasDocument)
-                                            <a href="{{ $fileLink }}" download target="_blank" class="text-decoration-none text-primary fw-semibold" title="Klik untuk mengunduh dokumen">
-                                                <i class="bi bi-download me-1"></i> {{ $fileName }}
-                                            </a>
-                                        @else
-                                            <span class="text-muted small">{{ $fileName }}</span>
-                                        @endif
+                                    <td style="max-width: 200px;">
+                                        <a href="{{ $fileLink }}" download class="btn btn-sm btn-light text-primary border-0 d-inline-flex align-items-center rounded-3 p-2 w-100" title="{{ $fileName }}">
+                                            <i class="bi bi-file-earmark-pdf text-danger fs-5 me-2"></i>
+                                            <span class="text-truncate fw-semibold text-start flex-grow-1" style="font-size: 0.85rem;">{{ $fileName }}</span>
+                                            <i class="bi bi-download ms-2 text-muted"></i>
+                                        </a>
                                     </td>
                                     <td>
-                                        {{ \Carbon\Carbon::parse($row->deadline)->locale('id')->isoFormat('D MMMM YYYY') }}
+                                        <span class="text-dark" style="font-size: 13.5px;">
+                                            {{ \Carbon\Carbon::parse($row->deadline)->locale('id')->isoFormat('D MMMM YYYY') }}
+                                        </span>
                                     </td>
                                     <td>
                                         @if (strtolower($row->approval_status) == 'pending')
@@ -172,7 +177,6 @@
                                         <div class="d-flex gap-1">
                                             <button class="button-kustom btn-sm btn-verifikasi" 
                                                     data-bs-toggle="modal" 
-                                                    data-bs-toggle="modal" 
                                                     data-bs-target="#modalVerifikasi"
                                                     data-filename="{{ $fileName }}"
                                                     data-fileurl="{{ $fileLink }}"
@@ -181,7 +185,6 @@
                                                     data-id="{{ $row->id_internship }}">
                                                 Verifikasi
                                             </button>
-                                            <button class="btn btn-light btn-sm btn-action text-secondary ms-1"><i class="bi bi-trash"></i></button>
                                         </div>
                                     </td>
                                 </tr>
@@ -204,32 +207,37 @@
                     <h5 class="modal-title fw-bold">Detail Verifikasi Dokumen Pendukung</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body p-4">
-                    <div class="bg-light p-3 rounded-4 mb-3 d-flex align-items-center justify-content-between">
-                        <div class="d-flex align-items-center">
-                            <i class="bi bi-file-earmark-pdf-fill text-danger fs-1 me-3"></i>
-                            <div>
-                                <p class="mb-0 fw-bold" id="modalFileName">MOU_Mitra.pdf</p>
-                                <small class="text-muted">Dokumen Kriteria Kerjasama Magang</small>
+                <div class="modal-body p-4 pt-2">
+                    <div class="p-3 rounded-4 mb-4 d-flex align-items-center justify-content-between w-100 overflow-hidden" style="background-color: #f8f9fa; border: 1px solid #e9ecef;">
+                        
+                        <div class="d-flex align-items-center min-w-0 me-3">
+                            <i class="bi bi-file-earmark-pdf-fill text-danger fs-1 me-3 flex-shrink-0"></i>
+                            <div class="min-w-0">
+                                <p class="mb-0 fw-bold text-truncate text-dark" id="modalFileName" style="font-size: 0.95rem; max-width: 240px;">MOU_Mitra.pdf</p>
+                                <small class="text-muted d-block text-truncate">Kriteria Kerjasama Magang</small>
                             </div>
                         </div>
-                        <a href="#" id="btnModalDownload" download class="btn btn-outline-primary btn-sm rounded-3">
+
+                        <a href="#" id="btnModalDownload" download class="btn btn-primary btn-sm rounded-3 px-3 py-2 d-flex align-items-center gap-1 flex-shrink-0 fw-semibold">
                             <i class="bi bi-download"></i> Unduh
                         </a>
                     </div>
-                    <p class="mb-1"><strong>Nama Mitra:</strong> <span id="modalCompanyName">-</span></p>
-                    <p class="mb-3"><strong>Nama Program Magang:</strong> <span id="modalInternshipTitle">-</span></p>
-                    <p class="mb-0">Apakah isi dokumen legal/kriteria lowongan ini sudah memenuhi aturan magang mahasiswa Universitas Sebelas Maret?</p>
+
+                    <div class="mb-4">
+                        <p class="mb-2 text-secondary" style="font-size: 0.9rem;"><strong>Nama Mitra:</strong> <span class="text-dark d-block fw-semibold mt-1" id="modalCompanyName">-</span></p>
+                        <p class="mb-0 text-secondary" style="font-size: 0.9rem;"><strong>Nama Program Magang:</strong> <span class="text-dark d-block fw-semibold mt-1" id="modalInternshipTitle">-</span></p>
+                    </div>
+                    <p class="mb-0 text-muted border-top pt-3" style="font-size: 0.9rem; line-height: 1.5;">Apakah isi dokumen legal/kriteria lowongan ini sudah memenuhi aturan magang mahasiswa Universitas Sebelas Maret?</p>
                 </div>
                 <div class="modal-footer border-0 pb-4 px-4 d-flex justify-content-end gap-2">
-                    <a href="#" id="btnModalReject" class="btn btn-danger px-3 fw-bold" style="border-radius: 12px;">Tolak Dokumen</a>
-                    <a href="#" id="btnModalApprove" class="button-kustom px-3 text-decoration-none text-center">Setujui & Terbitkan</a>
+                    <a href="#" id="btnModalReject" class="btn btn-light text-danger px-3 fw-semibold py-2" style="border-radius: 12px;">Tolak Dokumen</a>
+                    <a href="#" id="btnModalApprove" class="button-kustom px-3 text-decoration-none text-center py-2">Setujui & Terbitkan</a>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script>
         const modalVerifikasi = document.getElementById('modalVerifikasi');
         if (modalVerifikasi) {
@@ -248,7 +256,6 @@
                 
                 document.getElementById('btnModalDownload').href = fileurl;
                 
-                // DIPERBAIKI: Mengarahkan rute tombol aksi modal sesuai dengan nama endpoint validasi
                 document.getElementById('btnModalApprove').href = "{{ url('/validasi-magang/proses') }}?action=approve&id=" + idInternship;
                 document.getElementById('btnModalReject').href = "{{ url('/validasi-magang/proses') }}?action=reject&id=" + idInternship;
             });
