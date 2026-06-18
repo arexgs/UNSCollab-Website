@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage; 
+// Storage facade tidak dipakai — URL Supabase digenerate manual dari env
 
 class DaftarCompanyController extends Controller
 {
@@ -95,10 +95,14 @@ class DaftarCompanyController extends Controller
 
         $daftarPerusahaan = $querycompaniesList->orderBy('c.id_company', 'DESC')->get();
 
-        // --- PERBAIKAN: Looping Generate URL Supabase untuk Tabel Utama ---
+        // FIX #3: Generate URL Supabase manual (tidak butuh disk custom di filesystems.php)
+        $supabaseBase = rtrim(env('SUPABASE_URL', 'https://qdcjgonjjrxhghlbdarz.supabase.co'), '/');
+        $supabaseBucket = env('SUPABASE_BUCKET', 'logo-comp');
+
         foreach ($daftarPerusahaan as $row) {
             if (!empty($row->company_logo)) {
-                $row->logo_url = Storage::disk('supabase')->url($row->company_logo);
+                $fileName = basename($row->company_logo);
+                $row->logo_url = "{$supabaseBase}/storage/v1/object/public/{$supabaseBucket}/{$fileName}";
             } else {
                 $row->logo_url = null;
             }
@@ -140,9 +144,13 @@ class DaftarCompanyController extends Controller
             return response()->json(['error' => 'Data tidak ditemukan'], 404);
         }
 
-        // --- PERBAIKAN: Menggunakan kolom 'company_logo' dan generate URL Supabase ---
+        // FIX #3: Generate URL Supabase manual
+        $supabaseBase = rtrim(env('SUPABASE_URL', 'https://qdcjgonjjrxhghlbdarz.supabase.co'), '/');
+        $supabaseBucket = env('SUPABASE_BUCKET', 'logo-comp');
+
         if (!empty($perusahaan->company_logo)) {
-            $perusahaan->logo_url = Storage::disk('supabase')->url($perusahaan->company_logo);
+            $fileName = basename($perusahaan->company_logo);
+            $perusahaan->logo_url = "{$supabaseBase}/storage/v1/object/public/{$supabaseBucket}/{$fileName}";
         } else {
             $perusahaan->logo_url = null; 
         }

@@ -64,7 +64,8 @@ class TeamController extends Controller
         // 4. Query utama data Team dengan pagination
         $daftarTeams = Team::with('creator')
             ->withCount(['members as total_anggota' => function ($query) {
-                $query->wherePivot('join_status', 'accepted');
+                // FIX: wherePivot tidak kompatibel dengan withCount di PostgreSQL
+                $query->whereRaw("team_members.join_status = 'accepted'");
             }])
             ->when($searchQuery, function ($query, $search) {
                 return $query->where('team_name', 'ILIKE', "%{$search}%")
